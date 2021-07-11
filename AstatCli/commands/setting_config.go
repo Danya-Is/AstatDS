@@ -1,16 +1,15 @@
 package commands
 
 import (
-	"io/ioutil"
-	"os/user"
+	"strings"
 
+	"AstatDS/user"
 	"github.com/urfave/cli/v2"
 )
 
-
 func NewSetConfigCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "set-config",
+		Name:  "set-user",
 		Usage: "save cluster name and endpoints to file",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -30,13 +29,6 @@ func NewSetConfigCommand() *cli.Command {
 
 func setConfig(c *cli.Context) error {
 	name := c.String("name")
-	endpoints := c.String("endpoints")
-	configData := []byte("Cluster name: " + name + "\nEndpoints: " + endpoints)
-	usr, err := user.Current()
-	if err != nil {
-		return err
-	}
-	homeDir := usr.HomeDir
-	ioutil.WriteFile(homeDir + "/AstatConfig", configData, 0777)
-	return nil
+	endpoints := strings.Split(c.String("endpoints"), ",")
+	return (&user.Config{Cluster: name, Endpoints: endpoints}).Write()
 }

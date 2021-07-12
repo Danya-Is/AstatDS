@@ -3,13 +3,13 @@ package commands
 import (
 	"strings"
 
-	"AstatDS/user"
+	"AstatDS/client"
 	"github.com/urfave/cli/v2"
 )
 
 func NewSetConfigCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "set-user",
+		Name:  "set-client",
 		Usage: "save cluster name and endpoints to file",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -30,5 +30,5 @@ func NewSetConfigCommand() *cli.Command {
 func setConfig(c *cli.Context) error {
 	name := c.String("name")
 	endpoints := strings.Split(c.String("endpoints"), ",")
-	return (&user.Config{Cluster: name, Endpoints: endpoints}).Write()
+	return (&client.Config{Cluster: name, Endpoints: endpoints}).Write()
 }

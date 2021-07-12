@@ -14,7 +14,8 @@ func main() {
 	app.Usage = "console application for Astat"
 	app.Commands = []*cli.Command{
 		commands.NewSetConfigCommand(),
-		commands.NewPushCommand(),
+		commands.NewPutCommand(),
+		commands.NewGetCommand(),
 	}
 	app.Run(os.Args)
 }

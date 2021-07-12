@@ -1,4 +1,4 @@
-package user
+package client
 
 import (
 	"encoding/json"
@@ -33,7 +33,7 @@ func (config *Config) Write() error {
 	return nil
 }
 
-func Read() (*Config, error) {
+func ReadFromDisk() (*Config, error) {
 	configPath, err := path()
 	if err != nil {
 		return nil, err

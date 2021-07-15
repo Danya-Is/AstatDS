@@ -3,14 +3,18 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
-	"github.com/gin-gonic/gin"
 )
 
 var db = make(map[string]interface{})
+
+var (
+	state State
+)
 
 func HomeGetHandler(c *gin.Context) {
 	// key := c.Params.ByName("key")
@@ -48,7 +52,48 @@ func HomePostHandler(c *gin.Context) {
 	c.JSON(200, data)
 }
 
+func Init() {
+	//читаем с диска
+
+	//если стэйт пуст - ничего не делаем
+	//если нет - записываем base64 -> json -> struct в стэйт state := State {...}
+
+	//читаем флаги в стэйт
+
+	state.DiscoveryNodes()
+}
+
+func CheckIps() {
+	//обход по нодам
+
+	//посылаем запрос сервисам GET_IPS
+	//обновляем стэйт
+}
+
+func CheckKV() {
+	//обход по нодам
+
+	//отправляем запрос GET_KV
+	//обновляем стэйт
+}
+
+func WriteToDisk() {
+	//записываем стэйт в файл
+}
+
+func Loop() {
+	CheckIps()
+	CheckKV()
+
+	//хэш стейта с предыдущим, если изменен :
+	WriteToDisk()
+}
+
 func main() {
+
+	Init()
+
+	go Loop()
 	db["k"] = "v"
 	router := gin.Default()
 	router.GET("/", HomeGetHandler)
@@ -61,5 +106,7 @@ func main() {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
+
+	//разобраться с обработкой запросов по техническому порту
 	s.ListenAndServe()
 }

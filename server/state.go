@@ -1,4 +1,4 @@
-package main
+package server
 
 type State struct {
 	KV map[string]interface{}
@@ -14,6 +14,8 @@ type State struct {
 
 	nodeName  string
 	statePath string
+
+	hash string
 }
 
 func (state *State) DiscoveryNodes() {

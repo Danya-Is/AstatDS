@@ -1,13 +1,14 @@
-package main
+package server
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var db = make(map[string]interface{})
@@ -86,8 +87,9 @@ func Loop() {
 		CheckIps()
 		CheckKV()
 
-		//хэш стейта с предыдущим, если изменен :
-		WriteToDisk()
+		if state.hash != MD5(state) {
+			WriteToDisk()
+		}
 	}
 }
 
@@ -109,6 +111,7 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	//разобраться с обработкой запросов по техническому порту
+	//*TODO разобраться с обработкой запросов по техническому порту
+
 	s.ListenAndServe()
 }

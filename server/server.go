@@ -82,11 +82,13 @@ func WriteToDisk() {
 }
 
 func Loop() {
-	CheckIps()
-	CheckKV()
+	for {
+		CheckIps()
+		CheckKV()
 
-	//хэш стейта с предыдущим, если изменен :
-	WriteToDisk()
+		//хэш стейта с предыдущим, если изменен :
+		WriteToDisk()
+	}
 }
 
 func main() {

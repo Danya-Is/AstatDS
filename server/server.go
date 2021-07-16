@@ -11,8 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var db = make(map[string]interface{})
-
 var (
 	state State
 )
@@ -20,7 +18,7 @@ var (
 func HomeGetHandler(c *gin.Context) {
 	// key := c.Params.ByName("key")
 	key := c.Query("key")
-	value, ok := db[key]
+	value, ok := state.KV[key]
 	if ok {
 		c.JSON(200, gin.H{
 			"key":   key,
@@ -41,14 +39,14 @@ func HomePostHandler(c *gin.Context) {
 	err = json.Unmarshal(value, &m)
 	data := m.(map[string]interface{})
 	for k, v := range data {
-		for k1 := range db {
+		for k1 := range state.KV {
 			if k1 == k {
 				// later should think about it more
 				fmt.Println("this key already exists")
 				break
 			}
 		}
-		db[k] = v
+		state.KV[k] = v
 	}
 	c.JSON(200, data)
 }
@@ -96,9 +94,8 @@ func Loop() {
 func main() {
 
 	Init()
-
 	go Loop()
-	db["k"] = "v"
+
 	router := gin.Default()
 	router.GET("/", HomeGetHandler)
 	router.PUT("/", HomePostHandler)

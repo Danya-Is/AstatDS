@@ -1,6 +1,7 @@
 package client
 
 import (
+	"AstatDS"
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
@@ -17,11 +18,6 @@ type Client struct {
 	Cluster   string
 }
 
-type Request struct {
-	key   string
-	value []byte
-}
-
 func New(config *Config) Client {
 	return Client{
 		Endpoints: config.Endpoints,
@@ -32,7 +28,11 @@ func New(config *Config) Client {
 func (c *Client) Get(key string) []byte {
 	client := &http.Client{}
 	for i := 0; i < len(c.Endpoints); i++ {
-		req, err := http.NewRequest("GET", c.Endpoints[i], bytes.NewReader([]byte(key)))
+		reqBody, _ := json.Marshal(AstatDS.Request{
+			Type: AstatDS.GET_VALUE,
+			Key:  key,
+		})
+		req, err := http.NewRequest("GET", c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
 			//???
 			continue
@@ -48,13 +48,14 @@ func (c *Client) Get(key string) []byte {
 	return nil
 }
 
-func (c *Client) Put(key string, value []byte) error {
+func (c *Client) Put(key string, value string) error {
 	client := &http.Client{}
 	for i := 0; i < len(c.Endpoints); i++ {
 		reqBody, _ := json.Marshal(
-			Request{
-				key:   key,
-				value: value,
+			AstatDS.Request{
+				Type:  AstatDS.PUT_VALUE,
+				Key:   key,
+				Value: value,
 			})
 		req, err := http.NewRequest("POST", c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {

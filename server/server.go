@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"AstatDS"
 	"github.com/gin-gonic/gin"
 )
 
@@ -41,7 +42,7 @@ func HomePostHandler(c *gin.Context) {
 	for k, v := range data {
 		for k1 := range state.KV {
 			if k1 == k {
-				// later should think about it more
+				//TODO later should think about it more
 				fmt.Println("this key already exists")
 				break
 			}
@@ -51,6 +52,25 @@ func HomePostHandler(c *gin.Context) {
 	c.JSON(200, data)
 }
 
+func GetHandler(c *gin.Context) {
+	body := c.Request.Body
+	value, err := ioutil.ReadAll(body)
+	fmt.Println(string(value))
+	if err != nil {
+		log.Fatal(err)
+	}
+	request := new(AstatDS.Request)
+	json.Unmarshal(value, &request)
+	switch request.Type {
+	case AstatDS.GET_IPS:
+		c.JSON(http.StatusOK, state.Ips)
+	case AstatDS.GET_KV:
+		//TODO сделать предварительную сверку по хэшу
+		c.JSON(http.StatusOK, state.KV)
+	}
+
+}
+
 func Init() {
 	//читаем с диска
 
@@ -58,22 +78,9 @@ func Init() {
 	//если нет - записываем base64 -> json -> struct в стэйт state := State {...}
 
 	//читаем флаги в стэйт
+	//TODO проверить чтобы пользоватеь указал все обязательные флаги, вроде myPort, myClientPort
 
 	state.DiscoveryNodes()
-}
-
-func CheckIps() {
-	//обход по нодам
-
-	//посылаем запрос сервисам GET_IPS
-	//обновляем стэйт
-}
-
-func CheckKV() {
-	//обход по нодам
-
-	//отправляем запрос GET_KV
-	//обновляем стэйт
 }
 
 func WriteToDisk() {
@@ -82,8 +89,8 @@ func WriteToDisk() {
 
 func Loop() {
 	for {
-		CheckIps()
-		CheckKV()
+		state.CheckIps()
+		state.CheckKV()
 
 		if state.hash != MD5(state) {
 			WriteToDisk()
@@ -96,19 +103,28 @@ func main() {
 	Init()
 	go Loop()
 
-	router := gin.Default()
-	router.GET("/", HomeGetHandler)
-	router.PUT("/", HomePostHandler)
+	clientRouter := gin.Default()
+	clientRouter.GET("/", HomeGetHandler)
+	clientRouter.PUT("/", HomePostHandler)
 	// r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
-	s := &http.Server{
-		Addr:           ":8080", // for communication with client
-		Handler:        router,
+	sClient := &http.Server{
+		Addr:           state.myClientPort,
+		Handler:        clientRouter,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	//*TODO разобраться с обработкой запросов по техническому порту
+	techRouter := gin.Default()
+	techRouter.GET("/", GetHandler)
+	sTech := &http.Server{
+		Addr:           state.myPort,
+		Handler:        techRouter,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
 
-	s.ListenAndServe()
+	sClient.ListenAndServe()
+	sTech.ListenAndServe()
 }

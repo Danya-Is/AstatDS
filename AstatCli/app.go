@@ -7,8 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func main() {
-
+func Start() error {
 	app := cli.NewApp()
 	app.Name = "AstatCli"
 	app.Usage = "console application for Astat"
@@ -17,5 +16,12 @@ func main() {
 		commands.NewPutCommand(),
 		commands.NewGetCommand(),
 	}
-	app.Run(os.Args)
+	return app.Run(os.Args)
+}
+
+func main() {
+	err := Start()
+	if err != nil {
+		panic(err)
+	}
 }

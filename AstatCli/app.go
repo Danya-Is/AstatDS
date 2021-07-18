@@ -15,6 +15,7 @@ func Start() error {
 		commands.NewSetConfigCommand(),
 		commands.NewPutCommand(),
 		commands.NewGetCommand(),
+		commands.NewGetNodesCommand(),
 	}
 	return app.Run(os.Args)
 }

@@ -9,8 +9,9 @@ import (
 )
 
 type ClientApi interface {
-	Get()
-	Put()
+	Get(key string) []byte
+	Put(key string, value string) error
+	GetNodes() []byte
 }
 
 type Client struct {
@@ -70,4 +71,26 @@ func (c *Client) Put(key string, value string) error {
 		return nil
 	}
 	return KeyNotFoundError
+}
+
+func (c *Client) GetNodes() []byte {
+	client := &http.Client{}
+	for i := 0; i < len(c.Endpoints); i++ {
+		reqBody, _ := json.Marshal(AstatDS.Request{
+			Type: AstatDS.GET_NODES,
+		})
+		req, err := http.NewRequest("GET", c.Endpoints[i], bytes.NewReader(reqBody))
+		if err != nil {
+			//???
+			continue
+		}
+		httpResp, err := client.Do(req)
+		if err != nil {
+			//???
+			continue
+		}
+		respBody, _ := ioutil.ReadAll(httpResp.Body)
+		return respBody
+	}
+	return nil
 }

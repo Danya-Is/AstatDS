@@ -19,7 +19,7 @@ var (
 )
 
 func HomeGetHandler(c *gin.Context) {
-	// key := c.Params.ByName("key")
+	//TODO переделать под несколько типов запросов
 	key := c.Query("key")
 	value, ok := state.KV[key]
 	if ok {

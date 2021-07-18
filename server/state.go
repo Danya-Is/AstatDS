@@ -1,4 +1,4 @@
-package server
+package main
 
 type State struct {
 	KV map[string]interface{}

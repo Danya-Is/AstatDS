@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"crypto/md5"
@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func MD5(state State) string {
+func MD5(state *State) string {
 	data, _ := json.Marshal(state)
 	h := md5.Sum(data)
 	return fmt.Sprintf("%x", h)

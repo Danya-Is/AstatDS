@@ -1,10 +1,12 @@
-package server
+package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 )
 
 var (
-	state State
+	state = new(State)
 )
 
 func HomeGetHandler(c *gin.Context) {
@@ -98,6 +100,25 @@ func Loop() {
 	}
 }
 
+func listenNodes() {
+	ln, _ := net.Listen("tcp", state.myPort)
+	conn, _ := ln.Accept()
+
+	for {
+		message, _ := bufio.NewReader(conn).ReadString('\n')
+		request := new(AstatDS.Request)
+		json.Unmarshal([]byte(message), &request)
+
+		if request.Type == AstatDS.GET_IPS {
+			response, _ := json.Marshal(state.Ips)
+			conn.Write([]byte(string(response) + "\n"))
+		} else if request.Type == AstatDS.GET_KV {
+			response, _ := json.Marshal(state.Ips)
+			conn.Write([]byte(string(response) + "\n"))
+		}
+	}
+}
+
 func main() {
 
 	Init()
@@ -115,16 +136,7 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	techRouter := gin.Default()
-	techRouter.GET("/", GetHandler)
-	sTech := &http.Server{
-		Addr:           state.myPort,
-		Handler:        techRouter,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-
 	sClient.ListenAndServe()
-	sTech.ListenAndServe()
+
+	listenNodes()
 }

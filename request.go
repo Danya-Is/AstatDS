@@ -8,6 +8,7 @@ type Request struct {
 
 const (
 	GET_VALUE = "get value request"
+	GET_NODES = "get nodes request" //TODO
 	PUT_VALUE = "put value request"
 
 	GET_IPS = "get ips request"

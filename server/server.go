@@ -19,15 +19,30 @@ var (
 )
 
 func HomeGetHandler(c *gin.Context) {
-	key := c.Query("key")
-	value, ok := state.KV[key]
-	if ok {
-		c.JSON(200, gin.H{
-			"key":   key,
-			"value": value})
-	} else {
-		c.JSON(200, gin.H{"key": key, "value": "no value"})
+	body := c.Request.Body
+	data, err := ioutil.ReadAll(body)
+	fmt.Println(string(data))
+	if err != nil {
+		log.Fatal(err)
 	}
+	request := new(AstatDS.Request)
+	err = json.Unmarshal(data, &request)
+	switch request.Type {
+	case AstatDS.GET_VALUE:
+		key := request.Key
+		value, ok := state.KV[key]
+		if ok {
+			c.JSON(200, gin.H{
+				"key":   key,
+				"value": value})
+		} else {
+			c.JSON(200, gin.H{"key": key, "value": "no value"})
+		}
+	case AstatDS.GET_NODES:
+		c.JSON(200, state.Ips)
+
+	}
+
 }
 
 func HomePostHandler(c *gin.Context) {

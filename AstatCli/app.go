@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"AstatDS/AstatCli/commands"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli"
 )
 
 func main() {

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"AstatDS/client"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli"
 )
 
 func NewSetConfigCommand() *cli.Command {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"AstatDS/client"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli"
 )
 
 type response struct {

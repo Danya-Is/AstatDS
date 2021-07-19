@@ -42,7 +42,6 @@ func HomeGetHandler(c *gin.Context) {
 		c.JSON(200, state.Ips)
 
 	}
-
 }
 
 func HomePostHandler(c *gin.Context) {
@@ -118,7 +117,6 @@ func listenNodes() {
 			response := MD5(state.KV)
 			conn.Write([]byte(response + "\n"))
 		}
-
 	}
 }
 

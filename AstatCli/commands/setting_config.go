@@ -9,7 +9,7 @@ import (
 
 func NewSetConfigCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "set-client",
+		Name:  "set-config",
 		Usage: "save cluster name and endpoints to file",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -29,6 +29,7 @@ func NewSetConfigCommand() *cli.Command {
 
 func setConfig(c *cli.Context) error {
 	name := c.String("name")
+	//TODO discover nodes
 	endpoints := strings.Split(c.String("endpoints"), ",")
 	return (&client.Config{Cluster: name, Endpoints: endpoints}).Write()
 }

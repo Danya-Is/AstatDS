@@ -34,6 +34,7 @@ func (c *Client) Get(key string) []byte {
 			Type: AstatDS.GET_VALUE,
 			Key:  key,
 		})
+		print("KEY: " + key)
 		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
 			log.Fatal(err)

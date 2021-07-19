@@ -3,6 +3,7 @@ package commands
 import (
 	"AstatDS/client"
 	"github.com/urfave/cli"
+	"strings"
 )
 
 type response struct {
@@ -27,7 +28,7 @@ func get(c *cli.Context) error {
 	config, _ := client.ReadFromDisk()
 	clientApi := client.New(config)
 
-	respBody := clientApi.Get(c.String("key"))
+	respBody := clientApi.Get(strings.Trim(c.String("key"), "\n"))
 	if respBody == nil {
 		return client.KeyNotFoundError
 	}

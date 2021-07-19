@@ -32,9 +32,7 @@ func HomeGetHandler(c *gin.Context) {
 		key := request.Key
 		value, ok := state.KV[key]
 		if ok {
-			c.JSON(200, gin.H{
-				"key":   key,
-				"value": value})
+			c.JSON(200, value)
 		} else {
 			c.JSON(200, gin.H{"key": key, "value": "no value"})
 		}
@@ -88,7 +86,8 @@ func Loop() {
 		state.CheckIps()
 		state.CheckKV()
 
-		if state.hash != StateMD5(state) {
+		str, _ := json.Marshal(state)
+		if state.hash != MD5(str) {
 			WriteToDisk()
 		}
 	}
@@ -105,16 +104,24 @@ func listenNodes() {
 
 		switch request.Type {
 		case AstatDS.GET_IPS:
+			if _, ok := state.Ips[request.IP]; !ok {
+				state.Ips[request.IP] = Node{
+					time:   time.Now().String(),
+					status: ACTIVATED,
+				}
+			}
 			response, _ := json.Marshal(state.Ips)
 			conn.Write([]byte(string(response) + "\n"))
 		case AstatDS.GET_KV:
 			response, _ := json.Marshal(state.Ips)
 			conn.Write([]byte(string(response) + "\n"))
 		case AstatDS.GET_IPS_HASH:
-			response := MD5(state.Ips)
+			str, _ := json.Marshal(state.Ips)
+			response := MD5(str)
 			conn.Write([]byte(response + "\n"))
 		case AstatDS.GET_KV_HASH:
-			response := MD5(state.KV)
+			str, _ := json.Marshal(state.KV)
+			response := MD5(str)
 			conn.Write([]byte(response + "\n"))
 		}
 	}

@@ -5,17 +5,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"log"
 	"net"
 	"net/http"
 	"time"
-
+	"flag"
 	"AstatDS"
 	"github.com/gin-gonic/gin"
+	"encoding/base64"
 )
 
 var (
 	state = new(State)
+	clientPortFlag = flag.String("cp", ":8080", "flag for client communication")
+	myPortFlag = flag.String("p", ":8081", "flag for technical communication")
+	discoveryIpFlag = flag.String("d", ":8082", "port belonging to one of already launched services in the cluster")
+	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
+	nodeNameFlag = flag.String("n", "DefaultName", "name of the service")
+	statePathFlag = flag.String("s", "state", "state path")
 )
 
 func HomeGetHandler(c *gin.Context) {
@@ -32,6 +40,7 @@ func HomeGetHandler(c *gin.Context) {
 		key := request.Key
 		value, ok := state.KV[key]
 		if ok {
+			fmt.Println(value)
 			c.JSON(200, gin.H{
 				"key":   key,
 				"value": value})
@@ -68,6 +77,38 @@ func HomePostHandler(c *gin.Context) {
 }
 
 func Init() {
+	flag.Parse()
+	if _, err := os.Stat(*statePathFlag); os.IsNotExist(err) {
+		os.Create(*statePathFlag) // create file if it isn't exist
+	}
+	file, err := ioutil.ReadFile(*statePathFlag)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(file) > 0 { // that means if file is not empty
+		fDec, err := base64.StdEncoding.DecodeString(string(file))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(fDec)) 
+		// jsDec, _ := json.Marshal(fDec) // idk if this really has to be here, we can assume that we alwsys have proper json, dont we?
+		// fmt.Println(string(jsDec)) // fDec and jsDec are the same... except '\n' thing
+		err = json.Unmarshal(fDec, &state)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		state.KV = make(map[string]interface{})
+		state.Ips = make(map[string]interface{})
+	}
+	fmt.Println(state)
+	state.MyClientPort = *clientPortFlag
+	state.MyPort = *myPortFlag
+	state.DiscoveryIpPort = *discoveryIpFlag
+	state.ClusterName = *clusterNameFlag
+	state.NodeName = *nodeNameFlag
+	state.StatePath = *statePathFlag
+	fmt.Println(state)
 	//читаем с диска
 
 	//если стэйт пуст - ничего не делаем
@@ -88,14 +129,14 @@ func Loop() {
 		state.CheckIps()
 		state.CheckKV()
 
-		if state.hash != StateMD5(state) {
+		if state.Hash != StateMD5(state) {
 			WriteToDisk()
 		}
 	}
 }
 
 func listenNodes() {
-	ln, _ := net.Listen("tcp", state.myPort)
+	ln, _ := net.Listen("tcp", state.MyPort)
 	conn, _ := ln.Accept()
 
 	for {
@@ -130,7 +171,7 @@ func main() {
 	clientRouter.PUT("/", HomePostHandler)
 	// r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	sClient := &http.Server{
-		Addr:           state.myClientPort,
+		Addr:           state.MyClientPort,
 		Handler:        clientRouter,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

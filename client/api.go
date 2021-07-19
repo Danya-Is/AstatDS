@@ -69,5 +69,5 @@ func (c *Client) Put(key string, value string) error {
 		}
 		return nil
 	}
-	return KeyNotFoundError
+	return NodesDontAnswer
 }

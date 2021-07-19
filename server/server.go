@@ -19,7 +19,6 @@ var (
 )
 
 func HomeGetHandler(c *gin.Context) {
-	// key := c.Params.ByName("key")
 	key := c.Query("key")
 	value, ok := state.KV[key]
 	if ok {
@@ -54,25 +53,6 @@ func HomePostHandler(c *gin.Context) {
 	c.JSON(200, data)
 }
 
-func GetHandler(c *gin.Context) {
-	body := c.Request.Body
-	value, err := ioutil.ReadAll(body)
-	fmt.Println(string(value))
-	if err != nil {
-		log.Fatal(err)
-	}
-	request := new(AstatDS.Request)
-	json.Unmarshal(value, &request)
-	switch request.Type {
-	case AstatDS.GET_IPS:
-		c.JSON(http.StatusOK, state.Ips)
-	case AstatDS.GET_KV:
-		//TODO сделать предварительную сверку по хэшу
-		c.JSON(http.StatusOK, state.KV)
-	}
-
-}
-
 func Init() {
 	//читаем с диска
 
@@ -94,7 +74,7 @@ func Loop() {
 		state.CheckIps()
 		state.CheckKV()
 
-		if state.hash != MD5(state) {
+		if state.hash != StateMD5(state) {
 			WriteToDisk()
 		}
 	}
@@ -109,13 +89,21 @@ func listenNodes() {
 		request := new(AstatDS.Request)
 		json.Unmarshal([]byte(message), &request)
 
-		if request.Type == AstatDS.GET_IPS {
+		switch request.Type {
+		case AstatDS.GET_IPS:
 			response, _ := json.Marshal(state.Ips)
 			conn.Write([]byte(string(response) + "\n"))
-		} else if request.Type == AstatDS.GET_KV {
+		case AstatDS.GET_KV:
 			response, _ := json.Marshal(state.Ips)
 			conn.Write([]byte(string(response) + "\n"))
+		case AstatDS.GET_IPS_HASH:
+			response := MD5(state.Ips)
+			conn.Write([]byte(response + "\n"))
+		case AstatDS.GET_KV_HASH:
+			response := MD5(state.KV)
+			conn.Write([]byte(response + "\n"))
 		}
+
 	}
 }
 

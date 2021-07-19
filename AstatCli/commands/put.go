@@ -26,5 +26,5 @@ func NewPutCommand() *cli.Command {
 func put(c *cli.Context) error {
 	config, _ := client.ReadFromDisk()
 	clientApi := client.New(config)
-	return clientApi.Put(c.String("key"), []byte(c.String("value")))
+	return clientApi.Put(c.String("key"), c.String("value"))
 }

@@ -8,8 +8,14 @@ import (
 	"os"
 )
 
-func MD5(state *State) string {
+func StateMD5(state *State) string {
 	data, _ := json.Marshal(state)
+	h := md5.Sum(data)
+	return fmt.Sprintf("%x", h)
+}
+
+func MD5(dict map[string]interface{}) string {
+	data, _ := json.Marshal(dict)
 	h := md5.Sum(data)
 	return fmt.Sprintf("%x", h)
 }

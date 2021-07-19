@@ -10,20 +10,14 @@ import (
 
 type State struct {
 	KV map[string]interface{}
-
-	Ips map[string]Node
-
-	ClusterName string
-
-	myClientPort string
-	myPort       string
-
-	discoveryIpPort string
-
-	nodeName  string
-	statePath string
-
-	hash string
+	Ips map[string]interface{}
+	ClusterName string `json:"ClusterName"`
+	MyClientPort string `json:"myClientPort"`
+	MyPort       string `json:"myPort"`
+	DiscoveryIpPort string `json:"discoveryIpPort"`
+	NodeName  string `json:"nodeName"`
+	StatePath string `json:"statePath"`
+	Hash string `json:"hash"`
 }
 
 type Node struct {

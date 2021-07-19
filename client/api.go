@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -33,14 +34,14 @@ func (c *Client) Get(key string) []byte {
 			Type: AstatDS.GET_VALUE,
 			Key:  key,
 		})
-		req, err := http.NewRequest("GET", c.Endpoints[i], bytes.NewReader(reqBody))
+		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
-			//???
+			log.Fatal(err)
 			continue
 		}
 		httpResp, err := client.Do(req)
 		if err != nil {
-			//???
+			log.Fatal(err)
 			continue
 		}
 		respBody, _ := ioutil.ReadAll(httpResp.Body)
@@ -52,20 +53,23 @@ func (c *Client) Get(key string) []byte {
 func (c *Client) Put(key string, value string) error {
 	client := &http.Client{}
 	for i := 0; i < len(c.Endpoints); i++ {
-		reqBody, _ := json.Marshal(
+		reqBody, err := json.Marshal(
 			AstatDS.Request{
 				Type:  AstatDS.PUT_VALUE,
 				Key:   key,
 				Value: value,
 			})
-		req, err := http.NewRequest("POST", c.Endpoints[i], bytes.NewReader(reqBody))
+		print("created reqBody\n")
+		req, err := http.NewRequest("POST", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
+		print("created req\n")
 		if err != nil {
-			//???
+			log.Fatal(err)
 			continue
 		}
 		_, err = client.Do(req)
+		print("did req\n")
 		if err != nil {
-			//???
+			log.Fatal(err)
 			continue
 		}
 		return nil
@@ -81,12 +85,12 @@ func (c *Client) GetNodes() []byte {
 		})
 		req, err := http.NewRequest("GET", c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
-			//???
+			log.Fatal(err)
 			continue
 		}
 		httpResp, err := client.Do(req)
 		if err != nil {
-			//???
+			log.Fatal(err)
 			continue
 		}
 		respBody, _ := ioutil.ReadAll(httpResp.Body)

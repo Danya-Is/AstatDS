@@ -1,9 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"AstatDS/client"
 	"github.com/urfave/cli"
 )
@@ -30,15 +27,11 @@ func get(c *cli.Context) error {
 	config, _ := client.ReadFromDisk()
 	clientApi := client.New(config)
 
-	resp := new(response)
 	respBody := clientApi.Get(c.String("key"))
 	if respBody == nil {
 		return client.KeyNotFoundError
 	}
-	err := json.Unmarshal(respBody, resp)
-	if err != nil {
-		return err
-	}
-	fmt.Print(resp)
+	print("responseBody: " + string(respBody) + "\n")
+	print("\n")
 	return nil
 }

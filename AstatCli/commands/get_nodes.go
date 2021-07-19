@@ -4,7 +4,7 @@ import (
 	"AstatDS/client"
 	"encoding/json"
 	"fmt"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli"
 )
 
 func NewGetNodesCommand() *cli.Command {

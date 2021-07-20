@@ -62,7 +62,10 @@ func HomePostHandler(c *gin.Context) {
 	}
 	req := new(AstatDS.Request)
 	err = json.Unmarshal(value, &req)
-	state.KV[req.Key] = req.Value
+	state.KV[req.Key] = Value{
+		time:  time.Now().Format(time_format),
+		value: req.Value,
+	}
 	c.String(200, "OK")
 }
 
@@ -88,7 +91,7 @@ func Init() {
 			log.Fatal(err)
 		}
 	} else {
-		state.KV = make(map[string]interface{})
+		state.KV = make(map[string]Value)
 		state.Ips = make(map[string]Node)
 	}
 	fmt.Println(state)
@@ -172,7 +175,7 @@ func listenNodes() {
 		case AstatDS.GET_IPS:
 			if _, ok := state.Ips[request.IP]; !ok {
 				state.Ips[request.IP] = Node{
-					time:   time.Now().String(),
+					time:   time.Now().Format(time_format),
 					status: ACTIVATED,
 				}
 			}

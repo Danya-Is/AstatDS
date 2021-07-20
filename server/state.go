@@ -36,7 +36,7 @@ const (
 	ACTIVATED  = "activated"
 	DEPRECATED = "deprecated"
 
-	time_format = "2006-01-02 15:04:05 MSK"
+	time_format = "2006-01-02 15:04:05 MST"
 )
 
 func (state *State) DiscoveryNodes() {

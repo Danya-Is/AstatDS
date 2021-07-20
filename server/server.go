@@ -19,7 +19,7 @@ import (
 var (
 	state           = new(State)
 	clientPortFlag  = flag.String("cp", ":8080", "flag for client communication")
-	myPortFlag      = flag.String("p", ":8081", "flag for technical communication")
+	myPortFlag      = flag.String("p", "8081", "flag for technical communication")
 	discoveryIpFlag = flag.String("d", "", "port belonging to one of already launched services in the cluster")
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
 	nodeNameFlag    = flag.String("n", "DefaultName", "name of the service")
@@ -106,7 +106,24 @@ func Init() {
 }
 
 func WriteToDisk() {
-	//записываем стэйт в файл
+	jsonstate, err := json.Marshal(state)
+	if err != nil {
+		log.Fatal(err)
+	}
+	stateEnc := base64.StdEncoding.EncodeToString(jsonstate)
+	// overwriting content
+
+	file, err := os.Create(state.StatePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = file.WriteString(stateEnc)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func Loop() {

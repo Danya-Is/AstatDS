@@ -9,15 +9,15 @@ import (
 )
 
 type State struct {
-	KV map[string]interface{}
-	Ips map[string]interface{}
-	ClusterName string `json:"ClusterName"`
-	MyClientPort string `json:"myClientPort"`
-	MyPort       string `json:"myPort"`
+	KV              map[string]interface{}
+	Ips             map[string]interface{}
+	ClusterName     string `json:"ClusterName"`
+	MyClientPort    string `json:"myClientPort"`
+	MyPort          string `json:"myPort"`
 	DiscoveryIpPort string `json:"discoveryIpPort"`
-	NodeName  string `json:"nodeName"`
-	StatePath string `json:"statePath"`
-	Hash string `json:"hash"`
+	NodeName        string `json:"nodeName"`
+	StatePath       string `json:"statePath"`
+	Hash            string `json:"hash"`
 }
 
 type Node struct {
@@ -31,10 +31,10 @@ const (
 )
 
 func (state *State) DiscoveryNodes() {
-	conn, _ := net.Dial("tcp", state.discoveryIpPort)
+	conn, _ := net.Dial("tcp", state.DiscoveryIpPort)
 	str, _ := json.Marshal(AstatDS.Request{
 		Type: AstatDS.GET_IPS,
-		IP:   state.myPort,
+		IP:   state.MyPort,
 	})
 	_, err := fmt.Fprintf(conn, string(str))
 	if err != nil {

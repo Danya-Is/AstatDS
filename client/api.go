@@ -34,7 +34,6 @@ func (c *Client) Get(key string) []byte {
 			Type: AstatDS.GET_VALUE,
 			Key:  key,
 		})
-		print("KEY: " + key)
 		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
 			log.Fatal(err)
@@ -61,7 +60,7 @@ func (c *Client) Put(key string, value string) error {
 				Value: value,
 			})
 		print("created reqBody\n")
-		req, err := http.NewRequest("POST", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
+		req, err := http.NewRequest("PUT", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		print("created req\n")
 		if err != nil {
 			log.Fatal(err)
@@ -84,7 +83,7 @@ func (c *Client) GetNodes() []byte {
 		reqBody, _ := json.Marshal(AstatDS.Request{
 			Type: AstatDS.GET_NODES,
 		})
-		req, err := http.NewRequest("GET", c.Endpoints[i], bytes.NewReader(reqBody))
+		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
 			log.Fatal(err)
 			continue

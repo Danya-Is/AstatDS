@@ -1,29 +1,29 @@
 package main
 
 import (
+	"AstatDS"
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
-	"os"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
-	"flag"
-	"AstatDS"
-	"github.com/gin-gonic/gin"
-	"encoding/base64"
 )
 
 var (
-	state = new(State)
-	clientPortFlag = flag.String("cp", ":8080", "flag for client communication")
-	myPortFlag = flag.String("p", ":8081", "flag for technical communication")
-	discoveryIpFlag = flag.String("d", ":8082", "port belonging to one of already launched services in the cluster")
+	state           = new(State)
+	clientPortFlag  = flag.String("cp", ":8080", "flag for client communication")
+	myPortFlag      = flag.String("p", ":8081", "flag for technical communication")
+	discoveryIpFlag = flag.String("d", "", "port belonging to one of already launched services in the cluster")
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
-	nodeNameFlag = flag.String("n", "DefaultName", "name of the service")
-	statePathFlag = flag.String("s", "state", "state path")
+	nodeNameFlag    = flag.String("n", "DefaultName", "name of the service")
+	statePathFlag   = flag.String("s", "state", "state path")
 )
 
 func HomeGetHandler(c *gin.Context) {
@@ -57,20 +57,10 @@ func HomePostHandler(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var m interface{}
-	err = json.Unmarshal(value, &m)
-	data := m.(map[string]interface{})
-	for k, v := range data {
-		for k1 := range state.KV {
-			if k1 == k {
-				//TODO later should think about it more
-				fmt.Println("this key already exists")
-				break
-			}
-		}
-		state.KV[k] = v
-	}
-	c.JSON(200, data)
+	req := new(AstatDS.Request)
+	err = json.Unmarshal(value, &req)
+	state.KV[req.Key] = req.Value
+	c.String(200, "OK")
 }
 
 func Init() {
@@ -106,15 +96,13 @@ func Init() {
 	state.NodeName = *nodeNameFlag
 	state.StatePath = *statePathFlag
 	fmt.Println(state)
-	//читаем с диска
 
-	//если стэйт пуст - ничего не делаем
-	//если нет - записываем base64 -> json -> struct в стэйт state := State {...}
+	//TODO проверить чтобы пользоватеь указал все обязательные флаги и КОРРЕКТНО, вроде myPort, myClientPort
 
-	//читаем флаги в стэйт
-	//TODO проверить чтобы пользоватеь указал все обязательные флаги, вроде myPort, myClientPort
+	if len(state.DiscoveryIpPort) > 0 {
+		state.DiscoveryNodes()
+	}
 
-	state.DiscoveryNodes()
 }
 
 func WriteToDisk() {
@@ -127,15 +115,22 @@ func Loop() {
 		state.CheckKV()
 
 		str, _ := json.Marshal(state)
-		if state.hash != MD5(str) {
+		if state.Hash != MD5(str) {
 			WriteToDisk()
 		}
 	}
 }
 
 func listenNodes() {
-	ln, _ := net.Listen("tcp", state.MyPort)
-	conn, _ := ln.Accept()
+	//TODO address
+	ln, err := net.Listen("tcp", "127.0.0.1:"+state.MyPort)
+	if err != nil {
+		panic(err)
+	}
+	conn, err := ln.Accept()
+	if err != nil {
+		panic(err)
+	}
 
 	for {
 		message, _ := bufio.NewReader(conn).ReadString('\n')
@@ -176,8 +171,9 @@ func main() {
 	clientRouter.GET("/", HomeGetHandler)
 	clientRouter.PUT("/", HomePostHandler)
 	// r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	//TODO address
 	sClient := &http.Server{
-		Addr:           state.MyClientPort,
+		Addr:           "0.0.0.0:" + state.MyClientPort,
 		Handler:        clientRouter,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

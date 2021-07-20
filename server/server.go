@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -24,6 +25,8 @@ var (
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
 	nodeNameFlag    = flag.String("n", "DefaultName", "name of the service")
 	statePathFlag   = flag.String("s", "state", "state path")
+
+	connections map[string]net.Conn
 )
 
 func HomeGetHandler(c *gin.Context) {
@@ -86,7 +89,7 @@ func Init() {
 		}
 	} else {
 		state.KV = make(map[string]interface{})
-		state.Ips = make(map[string]interface{})
+		state.Ips = make(map[string]Node)
 	}
 	fmt.Println(state)
 	state.MyClientPort = *clientPortFlag
@@ -102,7 +105,18 @@ func Init() {
 	if len(state.DiscoveryIpPort) > 0 {
 		state.DiscoveryNodes()
 	}
+	Connections()
 
+}
+
+func Connections() {
+	for addr := range state.Ips {
+		var err error
+		connections[addr], err = net.Dial("tcp", addr)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func WriteToDisk() {
@@ -123,7 +137,7 @@ func Loop() {
 
 func listenNodes() {
 	//TODO address
-	ln, err := net.Listen("tcp", "127.0.0.1:"+state.MyPort)
+	ln, err := net.Listen("tcp", "0.0.0.0:"+state.MyPort)
 	if err != nil {
 		panic(err)
 	}

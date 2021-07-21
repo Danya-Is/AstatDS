@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"os"
 	"time"
-
+	"strings"
 	"github.com/gin-gonic/gin"
 )
 
@@ -80,14 +80,18 @@ func Init() {
 		log.Fatal(err)
 	}
 	if len(file) > 0 { // that means if file is not empty
-		fDec, err := base64.StdEncoding.DecodeString(string(file))
+		data := strings.Split(string(file), "\n")
+		hashDec, err := base64.StdEncoding.DecodeString(data[0])
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(string(fDec))
+		StateHash = string(hashDec)
+		fmt.Println("StateHash: " + StateHash)
+		stateDec, err := base64.StdEncoding.DecodeString(data[1])
+		fmt.Println("State: " + string(stateDec))
 		// jsDec, _ := json.Marshal(fDec) // idk if this really has to be here, we can assume that we alwsys have proper json, dont we?
 		// fmt.Println(string(jsDec)) // fDec and jsDec are the same... except '\n' thing
-		err = json.Unmarshal(fDec, &state)
+		err = json.Unmarshal(stateDec, &state)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -103,7 +107,6 @@ func Init() {
 	state.StatePath = *statePathFlag
 	state.MyIP = *ipFlag
 	fmt.Println(state)
-
 	//TODO проверить чтобы пользоватеь указал все обязательные флаги и КОРРЕКТНО, вроде myPort, myClientPort
 
 	if len(state.DiscoveryIp) > 0 {
@@ -135,11 +138,12 @@ func WriteToDisk() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = file.WriteString(StateHash + "\n") // write StateHash as a first string
+	StateHashEnc := base64.StdEncoding.EncodeToString([]byte(StateHash))
+	_, err = file.WriteString(StateHashEnc + "\n") // write StateHash as a first string
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = file.WriteString(stateEnc + "\n") // write State encoded in base64 as a second string
+	_, err = file.WriteString(stateEnc) // write State encoded in base64 as a second string
 	if err != nil {
 		log.Fatal(err)
 	}

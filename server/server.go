@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,20 +14,119 @@ import (
 	"os"
 	"strings"
 	"time"
+	"strconv"
+	"github.com/gin-gonic/gin"
 )
 
 var (
 	state           = new(State)
-	clientPortFlag  = flag.String("cp", ":8080", "flag for client communication")
-	myPortFlag      = flag.String("p", "8081", "flag for technical communication")
+	clientPortFlag  = flag.String("cp", "", "flag for client communication")
+	myPortFlag      = flag.String("p", "", "flag for technical communication")
 	discoveryIpFlag = flag.String("d", "", "ip belonging to one of already launched services in the cluster")
-	ipFlag          = flag.String("i", "0.0.0.0", "my ip")
+	ipFlag          = flag.String("i", "", "my ip")
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
-	nodeNameFlag    = flag.String("n", "DefaultName", "name of the service")
-	statePathFlag   = flag.String("s", "/state", "state path")
+	nodeNameFlag    = flag.String("n", "", "name of the service")
+	statePathFlag   = flag.String("s", "", "state path")
 
 	connections map[string]net.Conn
 )
+
+func checkFlags() {
+	//ClientPort and myPort
+	if *clientPortFlag == "" {
+		fmt.Println("Error: clientPortFlag isn't specified")
+		os.Exit(2)
+	}
+	num, err := strconv.Atoi(*clientPortFlag)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+	if (num != 80 && num != 81) && (num < 1024 || num > 49151) {
+		fmt.Println("Error: clientPortFlag isn't correct")
+		os.Exit(2)
+	}
+	if *myPortFlag == "" {
+		fmt.Println("Error: myPortFlag isn't specified")
+		os.Exit(2)
+	}
+	num, err = strconv.Atoi(*myPortFlag)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+	if (num != 80 && num != 81) && (num < 1024 || num > 49151) {
+		fmt.Println("Error: myPortFlag isn't correct")
+		os.Exit(2)
+	}
+	// my ip
+	if *ipFlag == "" {
+		fmt.Println("Error: ipFlag isn't specified")
+		os.Exit(2)
+	}
+	num4 := strings.Split(*ipFlag, ".")
+	if len(num4) != 4 {
+		fmt.Println("Error: incorrect ipFlag")
+		os.Exit(2)
+	}
+	for i := range num4 {
+		num, err = strconv.Atoi(num4[i])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+		if num < 0 || num > 255 {
+			fmt.Println("Error: incorrect ipFlag")
+			os.Exit(2)
+		}
+	}
+	/* discoveryIpFlag (TODO more thorough check)
+	if *discoveryIpFlag == "" {
+		fmt.Println("Error: discoveryIpFlag isn't specified")
+		os.Exit(2)
+	}
+	num4 = strings.Split(*ipFlag, ".")
+	if len(num4) != 4 {
+		fmt.Println("Error: incorrect discoveryIpFlag")
+	}
+	for i:= 0; i < 3; i++ {
+		num, err = strconv.Atoi(num4[i])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+		if num < 0 || num > 255 {
+			fmt.Println("Error: incorrect ipFlag")
+			os.Exit(2)
+		}
+	}
+	num2 := strings.Split(*ipFlag, ":")
+	for i := range num2 {
+		num, err = strconv.Atoi(num4[i])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+		if (num < 0 || num > 255) && (i == 0) {
+			fmt.Println("Error: incorrect discoveryIpFlag")
+			os.Exit(2)
+		}
+		if (num != 80 && num != 81) && (num < 1024 || num > 49151) && (i == 1) {
+			fmt.Println("Error: incorrect discoveryIpFlag")
+			os.Exit(2)
+		}
+	}*/
+	// statePathFlag
+	if *statePathFlag == "" {
+		fmt.Println("Error: statePath isn't specified")
+		os.Exit(2)
+	}
+	// nodeNameFlag
+	if *nodeNameFlag == "" {
+		fmt.Println("Error: nodeName isn't specified")
+		os.Exit(2)
+	}
+}
 
 func HomeGetHandler(c *gin.Context) {
 	body := c.Request.Body
@@ -107,8 +205,7 @@ func Init() {
 	state.StatePath = *statePathFlag
 	state.MyIP = *ipFlag
 	fmt.Println(state)
-
-	//TODO проверить чтобы пользоватеь указал все обязательные флаги и КОРРЕКТНО, вроде myPort, myClientPort
+	checkFlags()
 
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()

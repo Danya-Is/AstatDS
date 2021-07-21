@@ -46,15 +46,20 @@ func (state *State) DiscoveryNodes() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	str, _ := json.Marshal(AstatDS.Request{
+	str, err := json.Marshal(AstatDS.Request{
 		Type: AstatDS.GET_IPS,
 		IP:   state.MyIP + ":" + state.MyPort,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	_, err = conn.Write(str)
+	fmt.Println("str writed")
 	if err != nil {
 		log.Fatal(err)
 	}
 	response, _ := bufio.NewReader(conn).ReadString('\n')
+	fmt.Println(response)
 	json.Unmarshal([]byte(response), &state.Ips)
 	fmt.Println("nodes discovered")
 	fmt.Println(state)

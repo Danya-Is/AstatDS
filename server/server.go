@@ -7,14 +7,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"time"
 	"strings"
-	"github.com/gin-gonic/gin"
+	"time"
 )
 
 var (
@@ -89,8 +89,6 @@ func Init() {
 		fmt.Println("StateHash: " + StateHash)
 		stateDec, err := base64.StdEncoding.DecodeString(data[1])
 		fmt.Println("State: " + string(stateDec))
-		// jsDec, _ := json.Marshal(fDec) // idk if this really has to be here, we can assume that we alwsys have proper json, dont we?
-		// fmt.Println(string(jsDec)) // fDec and jsDec are the same... except '\n' thing
 		err = json.Unmarshal(stateDec, &state)
 		if err != nil {
 			log.Fatal(err)
@@ -107,6 +105,7 @@ func Init() {
 	state.StatePath = *statePathFlag
 	state.MyIP = *ipFlag
 	fmt.Println(state)
+
 	//TODO проверить чтобы пользоватеь указал все обязательные флаги и КОРРЕКТНО, вроде myPort, myClientPort
 
 	if len(state.DiscoveryIp) > 0 {
@@ -165,20 +164,21 @@ func Loop() {
 	}
 }
 
-func listenNodes() {
-	ln, err := net.Listen("tcp", ":"+state.MyPort)
-	if err != nil {
-		panic(err)
-	}
-	conn, err := ln.Accept()
-	if err != nil {
-		panic(err)
-	}
-
+func handle(conn net.Conn) {
 	for {
-		message, _ := bufio.NewReader(conn).ReadString('\n')
+		message, err := bufio.NewReader(conn).ReadBytes('\n')
+		if err != nil {
+			fmt.Println("server disconnected")
+			return
+		}
+		fmt.Println(message)
 		request := new(AstatDS.Request)
-		json.Unmarshal([]byte(message), &request)
+		err = json.Unmarshal(message, &request)
+		if err != nil {
+			return
+		}
+
+		fmt.Println(request)
 
 		switch request.Type {
 		case AstatDS.GET_IPS:
@@ -189,19 +189,53 @@ func listenNodes() {
 				}
 			}
 			response, _ := json.Marshal(state.Ips)
-			conn.Write([]byte(string(response) + "\n"))
+			_, err = conn.Write([]byte(string(response) + "\n"))
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("got GET_IPS")
 		case AstatDS.GET_KV:
 			response, _ := json.Marshal(state.Ips)
-			conn.Write([]byte(string(response) + "\n"))
+			_, err = conn.Write([]byte(string(response) + "\n"))
+			if err != nil {
+				return
+			}
 		case AstatDS.GET_IPS_HASH:
 			str, _ := json.Marshal(state.Ips)
 			response := MD5(str)
-			conn.Write([]byte(response + "\n"))
+			_, err = conn.Write([]byte(response + "\n"))
+			if err != nil {
+				return
+			}
 		case AstatDS.GET_KV_HASH:
 			str, _ := json.Marshal(state.KV)
 			response := MD5(str)
-			conn.Write([]byte(response + "\n"))
+			_, err = conn.Write([]byte(response + "\n"))
+			if err != nil {
+				return
+			}
 		}
+	}
+}
+
+func listenNodes() {
+	ln, err := net.Listen("tcp", ":"+state.MyPort)
+	if err != nil {
+		panic(err)
+	}
+	defer func(ln net.Listener) {
+		err := ln.Close()
+		if err != nil {
+
+		}
+	}(ln)
+
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		go handle(conn)
 	}
 }
 
@@ -222,7 +256,11 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	sClient.ListenAndServe()
+	err := sClient.ListenAndServe()
+	if err != nil {
+		return
+	}
 
+	go Loop()
 	listenNodes()
 }

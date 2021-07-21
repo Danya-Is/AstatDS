@@ -94,7 +94,6 @@ func Init() {
 		state.KV = make(map[string]Value)
 		state.Ips = make(map[string]Node)
 	}
-	fmt.Println(state)
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
 	state.DiscoveryIpPort = *discoveryIpFlag
@@ -134,7 +133,11 @@ func WriteToDisk() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = file.WriteString(stateEnc)
+	_, err = file.WriteString(StateHash + "\n") // write StateHash as a first string
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = file.WriteString(stateEnc + "\n") // write State encoded in base64 as a second string
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -149,7 +152,8 @@ func Loop() {
 		state.CheckKV()
 
 		str, _ := json.Marshal(state)
-		if state.Hash != MD5(str) {
+		if StateHash != MD5(str) {
+			StateHash = MD5(str)
 			WriteToDisk()
 		}
 	}

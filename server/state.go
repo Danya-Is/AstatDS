@@ -19,8 +19,9 @@ type State struct {
 	DiscoveryIpPort string `json:"discoveryIpPort"`
 	NodeName        string `json:"nodeName"`
 	StatePath       string `json:"statePath"`
-	Hash            string `json:"hash"`
 }
+
+var StateHash string
 
 type Node struct {
 	time   string

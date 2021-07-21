@@ -25,7 +25,7 @@ var (
 	ipFlag          = flag.String("i", "0.0.0.0", "my ip")
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
 	nodeNameFlag    = flag.String("n", "DefaultName", "name of the service")
-	statePathFlag   = flag.String("s", "state", "state path")
+	statePathFlag   = flag.String("s", "/state", "state path")
 
 	connections map[string]net.Conn
 )
@@ -71,11 +71,13 @@ func HomePostHandler(c *gin.Context) {
 }
 
 func Init() {
+	home, _ := os.UserHomeDir()
 	flag.Parse()
-	if _, err := os.Stat(*statePathFlag); os.IsNotExist(err) {
-		os.Create(*statePathFlag) // create file if it isn't exist
+	if _, err := os.Stat(home + "/" + *statePathFlag); os.IsNotExist(err) {
+		os.Create(home + "/" + *statePathFlag) // create file if it isn't exist
 	}
-	file, err := ioutil.ReadFile(*statePathFlag)
+	fmt.Println(home)
+	file, err := ioutil.ReadFile(home + "/" + *statePathFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -126,6 +128,7 @@ func Connections() {
 }
 
 func WriteToDisk() {
+	home, _ := os.UserHomeDir()
 	jsonstate, err := json.Marshal(state)
 	if err != nil {
 		log.Fatal(err)
@@ -133,7 +136,7 @@ func WriteToDisk() {
 	stateEnc := base64.StdEncoding.EncodeToString(jsonstate)
 	// overwriting content
 
-	file, err := os.Create(state.StatePath)
+	file, err := os.Create(home + "/" + state.StatePath)
 	if err != nil {
 		log.Fatal(err)
 	}

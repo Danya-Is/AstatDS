@@ -21,7 +21,8 @@ var (
 	state           = new(State)
 	clientPortFlag  = flag.String("cp", ":8080", "flag for client communication")
 	myPortFlag      = flag.String("p", "8081", "flag for technical communication")
-	discoveryIpFlag = flag.String("d", "", "port belonging to one of already launched services in the cluster")
+	discoveryIpFlag = flag.String("d", "", "ip belonging to one of already launched services in the cluster")
+	ipFlag          = flag.String("i", "0.0.0.0", "my ip")
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
 	nodeNameFlag    = flag.String("n", "DefaultName", "name of the service")
 	statePathFlag   = flag.String("s", "state", "state path")
@@ -96,15 +97,16 @@ func Init() {
 	}
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
-	state.DiscoveryIpPort = *discoveryIpFlag
+	state.DiscoveryIp = *discoveryIpFlag
 	state.ClusterName = *clusterNameFlag
 	state.NodeName = *nodeNameFlag
 	state.StatePath = *statePathFlag
+	state.MyIP = *ipFlag
 	fmt.Println(state)
 
 	//TODO проверить чтобы пользоватеь указал все обязательные флаги и КОРРЕКТНО, вроде myPort, myClientPort
 
-	if len(state.DiscoveryIpPort) > 0 {
+	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
 	}
 	Connections()
@@ -160,8 +162,7 @@ func Loop() {
 }
 
 func listenNodes() {
-	//TODO address
-	ln, err := net.Listen("tcp", "0.0.0.0:"+state.MyPort)
+	ln, err := net.Listen("tcp", ":"+state.MyPort)
 	if err != nil {
 		panic(err)
 	}
@@ -209,9 +210,8 @@ func main() {
 	clientRouter.GET("/", HomeGetHandler)
 	clientRouter.PUT("/", HomePostHandler)
 	// r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
-	//TODO address
 	sClient := &http.Server{
-		Addr:           "0.0.0.0:" + state.MyClientPort,
+		Addr:           state.MyIP + ":" + state.MyClientPort,
 		Handler:        clientRouter,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

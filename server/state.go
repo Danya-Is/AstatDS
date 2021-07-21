@@ -5,20 +5,21 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"time"
 )
 
 type State struct {
-	KV          map[string]Value
-	Ips         map[string]Node
-	ClusterName string `json:"clusterName"`
-	//TODO MyIP       string `json:"myIP"`
-	MyClientPort    string `json:"myClientPort"`
-	MyPort          string `json:"myPort"`
-	DiscoveryIpPort string `json:"discoveryIpPort"`
-	NodeName        string `json:"nodeName"`
-	StatePath       string `json:"statePath"`
+	KV           map[string]Value
+	Ips          map[string]Node
+	ClusterName  string `json:"clusterName"`
+	MyIP         string `json:"myIP"`
+	MyClientPort string `json:"myClientPort"`
+	MyPort       string `json:"myPort"`
+	DiscoveryIp  string `json:"discoveryIp"`
+	NodeName     string `json:"nodeName"`
+	StatePath    string `json:"statePath"`
 }
 
 var StateHash string
@@ -41,17 +42,22 @@ const (
 )
 
 func (state *State) DiscoveryNodes() {
-	conn, _ := net.Dial("tcp", "0.0.0.0:"+state.DiscoveryIpPort)
+	conn, err := net.Dial("tcp", state.DiscoveryIp)
+	if err != nil {
+		log.Fatal(err)
+	}
 	str, _ := json.Marshal(AstatDS.Request{
 		Type: AstatDS.GET_IPS,
-		IP:   "0.0.0.0:" + state.MyPort,
+		IP:   state.MyIP + ":" + state.MyPort,
 	})
-	_, err := fmt.Fprintf(conn, string(str))
+	_, err = conn.Write(str)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	response, _ := bufio.NewReader(conn).ReadString('\n')
 	json.Unmarshal([]byte(response), &state.Ips)
+	fmt.Println("nodes discovered")
+	fmt.Println(state)
 	conn.Close()
 }
 
@@ -72,7 +78,7 @@ func (state *State) CheckIps() {
 		if response != MD5(str) {
 			str, _ := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_IPS,
-				IP:   "0.0.0.0:" + state.MyPort,
+				IP:   state.MyIP + ":" + state.MyPort,
 			})
 			_, err := fmt.Fprintf(conn, string(str))
 			if err != nil {
@@ -126,7 +132,7 @@ func (state *State) CheckKV() {
 		if response != MD5(str) {
 			str, _ := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_KV,
-				IP:   "0.0.0.0:" + state.MyPort,
+				IP:   state.MyIP + ":" + state.MyPort,
 			})
 			_, err := fmt.Fprintf(conn, string(str))
 			if err != nil {

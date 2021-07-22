@@ -2,20 +2,19 @@ package main
 
 import (
 	"AstatDS"
-	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -266,14 +265,16 @@ func Loop() {
 
 func handle(conn net.Conn) {
 	for {
-		message, err := bufio.NewReader(conn).ReadBytes('\n')
+		//message, err := bufio.NewReader(conn).ReadBytes('\n')
+		var message []byte
+		_, err := conn.Read(message)
 		if err != nil {
 			fmt.Println("server disconnected")
 			return
 		}
-		fmt.Println(message)
+		fmt.Println("message" + string(message) + ".")
 		request := new(AstatDS.Request)
-		err = json.Unmarshal(message, &request)
+		err = json.Unmarshal([]byte(message), &request)
 		if err != nil {
 			return
 		}
@@ -335,6 +336,7 @@ func listenNodes() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Println("new conn")
 		go handle(conn)
 	}
 }
@@ -361,6 +363,5 @@ func main() {
 		return
 	}
 
-	go Loop()
 	listenNodes()
 }

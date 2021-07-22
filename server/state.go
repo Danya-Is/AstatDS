@@ -53,7 +53,7 @@ func (state *State) DiscoveryNodes() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = conn.Write(str)
+	_, err = conn.Write([]byte(string(str) + "\n"))
 	fmt.Println("str writed")
 	if err != nil {
 		log.Fatal(err)
@@ -69,30 +69,37 @@ func (state *State) DiscoveryNodes() {
 func (state *State) CheckIps() {
 	//обход по нодам
 	var ips []map[string]Node
-	for _, conn := range connections {
-		str, _ := json.Marshal(AstatDS.Request{
-			Type: AstatDS.GET_IPS_HASH,
-		})
-		_, err := fmt.Fprintf(conn, string(str))
-		if err != nil {
-			panic(err)
-		}
-		response, _ := bufio.NewReader(conn).ReadString('\n')
-
-		str, _ = json.Marshal(state.Ips)
-		if response != MD5(str) {
+	for addr, conn := range connections {
+		if state.Ips[addr].status == ACTIVATED {
 			str, _ := json.Marshal(AstatDS.Request{
-				Type: AstatDS.GET_IPS,
-				IP:   state.MyIP + ":" + state.MyPort,
+				Type: AstatDS.GET_IPS_HASH,
 			})
 			_, err := fmt.Fprintf(conn, string(str))
 			if err != nil {
-				panic(err)
+				log.Println(err)
+				state.Ips[addr] = Node{
+					status: DEPRECATED,
+					time:   time.Now().Format(time_format),
+				}
+				continue
 			}
 			response, _ := bufio.NewReader(conn).ReadString('\n')
-			ip := new(map[string]Node)
-			json.Unmarshal([]byte(response), &ip)
-			ips = append(ips, *ip)
+
+			str, _ = json.Marshal(state.Ips)
+			if response != MD5(str) {
+				str, _ := json.Marshal(AstatDS.Request{
+					Type: AstatDS.GET_IPS,
+					IP:   state.MyIP + ":" + state.MyPort,
+				})
+				_, err := fmt.Fprintf(conn, string(str))
+				if err != nil {
+					panic(err)
+				}
+				response, _ := bufio.NewReader(conn).ReadString('\n')
+				ip := new(map[string]Node)
+				json.Unmarshal([]byte(response), &ip)
+				ips = append(ips, *ip)
+			}
 		}
 	}
 	//посылаем запрос сервисам GET_IPS
@@ -123,30 +130,37 @@ func UpdateIps(ips []map[string]Node) {
 func (state *State) CheckKV() {
 	//обход по нодам
 	var kvs []map[string]Value
-	for _, conn := range connections {
-		str, _ := json.Marshal(AstatDS.Request{
-			Type: AstatDS.GET_KV_HASH,
-		})
-		_, err := fmt.Fprintf(conn, string(str))
-		if err != nil {
-			panic(err)
-		}
-		response, _ := bufio.NewReader(conn).ReadString('\n')
-
-		str, _ = json.Marshal(state.Ips)
-		if response != MD5(str) {
+	for addr, conn := range connections {
+		if state.Ips[addr].status == ACTIVATED {
 			str, _ := json.Marshal(AstatDS.Request{
-				Type: AstatDS.GET_KV,
-				IP:   state.MyIP + ":" + state.MyPort,
+				Type: AstatDS.GET_KV_HASH,
 			})
 			_, err := fmt.Fprintf(conn, string(str))
 			if err != nil {
-				panic(err)
+				log.Println(err)
+				state.Ips[addr] = Node{
+					status: DEPRECATED,
+					time:   time.Now().Format(time_format),
+				}
+				continue
 			}
 			response, _ := bufio.NewReader(conn).ReadString('\n')
-			kv := new(map[string]Value)
-			json.Unmarshal([]byte(response), &kv)
-			kvs = append(kvs, *kv)
+
+			str, _ = json.Marshal(state.Ips)
+			if response != MD5(str) {
+				str, _ := json.Marshal(AstatDS.Request{
+					Type: AstatDS.GET_KV,
+					IP:   state.MyIP + ":" + state.MyPort,
+				})
+				_, err := fmt.Fprintf(conn, string(str))
+				if err != nil {
+					panic(err)
+				}
+				response, _ := bufio.NewReader(conn).ReadString('\n')
+				kv := new(map[string]Value)
+				json.Unmarshal([]byte(response), &kv)
+				kvs = append(kvs, *kv)
+			}
 		}
 	}
 	//отправляем запрос GET_KV

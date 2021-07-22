@@ -25,13 +25,13 @@ type State struct {
 var StateHash string
 
 type Node struct {
-	time   string `json:"time"`
-	status string `json:"status"`
+	Time   string `json:"time"`
+	Status string `json:"status"`
 }
 
 type Value struct {
-	time  string `json:"time"`
-	value string `json:"value"`
+	Time  string `json:"time"`
+	Value string `json:"value"`
 }
 
 const (
@@ -70,16 +70,23 @@ func (state *State) CheckIps() {
 	//обход по нодам
 	var ips []map[string]Node
 	for addr, conn := range connections {
-		if state.Ips[addr].status == ACTIVATED {
+		if state.Ips[addr].Status == ACTIVATED {
 			str, _ := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_IPS_HASH,
 			})
-			_, err := fmt.Fprintf(conn, string(str))
+			if conn == nil {
+				state.Ips[addr] = Node{
+					Status: DEPRECATED,
+					Time:   time.Now().Format(time_format),
+				}
+				continue
+			}
+			_, err := fmt.Fprintf(conn, string(str)+"\n")
 			if err != nil {
 				log.Println(err)
 				state.Ips[addr] = Node{
-					status: DEPRECATED,
-					time:   time.Now().Format(time_format),
+					Status: DEPRECATED,
+					Time:   time.Now().Format(time_format),
 				}
 				continue
 			}
@@ -91,9 +98,14 @@ func (state *State) CheckIps() {
 					Type: AstatDS.GET_IPS,
 					IP:   state.MyIP + ":" + state.MyPort,
 				})
-				_, err := fmt.Fprintf(conn, string(str))
+				_, err := fmt.Fprintf(conn, string(str)+"\n")
 				if err != nil {
-					panic(err)
+					log.Println(err)
+					state.Ips[addr] = Node{
+						Status: DEPRECATED,
+						Time:   time.Now().Format(time_format),
+					}
+					continue
 				}
 				response, _ := bufio.NewReader(conn).ReadString('\n')
 				ip := new(map[string]Node)
@@ -113,9 +125,9 @@ func UpdateIps(ips []map[string]Node) {
 		for addr, node := range m {
 			if _, ok := state.Ips[addr]; !ok {
 				state.Ips[addr] = node
-			} else if n, _ := state.Ips[addr]; n.status != node.status {
-				t, err := time.Parse(time_format, node.time)
-				curT, err := time.Parse(time_format, n.time)
+			} else if n, _ := state.Ips[addr]; n.Status != node.Status {
+				t, err := time.Parse(time_format, node.Time)
+				curT, err := time.Parse(time_format, n.Time)
 				if err != nil {
 					panic(err)
 				}
@@ -130,41 +142,53 @@ func UpdateIps(ips []map[string]Node) {
 func (state *State) CheckKV() {
 	//обход по нодам
 	var kvs []map[string]Value
-	for addr := range state.Ips {
-		if state.Ips[addr].status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-			fmt.Println("activated")
-			conn, err := net.Dial("tcp", addr)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
+	for addr, conn := range connections {
+		if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+			//conn, err := net.Dial("tcp", addr)
+			//if err != nil {
+			//	log.Println(err)
+			//	continue
+			//}
 			str, err := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_KV_HASH,
 			})
 			if err != nil {
 				log.Println(err)
 			}
-			_, err = fmt.Fprintf(conn, string(str))
+			if conn == nil {
+				state.Ips[addr] = Node{
+					Status: DEPRECATED,
+					Time:   time.Now().Format(time_format),
+				}
+				continue
+			}
+			_, err = fmt.Fprintf(conn, string(str)+"\n")
 			if err != nil {
 				log.Println(err)
 				state.Ips[addr] = Node{
-					status: DEPRECATED,
-					time:   time.Now().Format(time_format),
+					Status: DEPRECATED,
+					Time:   time.Now().Format(time_format),
 				}
 				continue
 			}
 			response, _ := bufio.NewReader(conn).ReadString('\n')
 
-			str, _ = json.Marshal(state.Ips)
-			fmt.Println(response + " vs " + string(str))
+			str, _ = json.Marshal(state.KV)
+			//fmt.Println(response + " vs " + MD5(str))
 			if response != MD5(str) {
 				str, _ := json.Marshal(AstatDS.Request{
 					Type: AstatDS.GET_KV,
 					IP:   state.MyIP + ":" + state.MyPort,
 				})
-				_, err := fmt.Fprintf(conn, string(str))
+				fmt.Println(str)
+				_, err := fmt.Fprintf(conn, string(str)+"\n")
 				if err != nil {
-					panic(err)
+					log.Println(err)
+					state.Ips[addr] = Node{
+						Status: DEPRECATED,
+						Time:   time.Now().Format(time_format),
+					}
+					continue
 				}
 				response, _ := bufio.NewReader(conn).ReadString('\n')
 				kv := new(map[string]Value)
@@ -184,9 +208,9 @@ func UpdateKV(kvs []map[string]Value) {
 		for k, v := range kv {
 			if _, ok := state.KV[k]; !ok {
 				state.KV[k] = v
-			} else if value, _ := state.KV[k]; value.value != v.value {
-				t, err := time.Parse(time_format, v.time)
-				curT, err := time.Parse(time_format, value.time)
+			} else if value, _ := state.KV[k]; value.Value != v.Value {
+				t, err := time.Parse(time_format, v.Time)
+				curT, err := time.Parse(time_format, value.Time)
 				if err != nil {
 					panic(err)
 				}

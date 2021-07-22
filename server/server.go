@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -145,7 +146,7 @@ func HomeGetHandler(c *gin.Context) {
 		value, ok := state.KV[key]
 		fmt.Println(state)
 		if ok {
-			c.String(200, value.value)
+			c.String(200, value.Value)
 		} else {
 			c.JSON(200, gin.H{"key": key, "value": "no value"})
 		}
@@ -166,8 +167,8 @@ func HomePostHandler(c *gin.Context) {
 	fmt.Println(value)
 	fmt.Println(req)
 	state.KV[req.Key] = Value{
-		time:  time.Now().Format(time_format),
-		value: req.Value,
+		Time:  time.Now().Format(time_format),
+		Value: req.Value,
 	}
 	fmt.Println(state)
 	c.String(200, "OK")
@@ -201,6 +202,10 @@ func Init() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		state.Ips[state.MyIP+":"+state.MyPort] = Node{
+			Time:   time.Now().Format(time_format),
+			Status: ACTIVATED,
+		}
 	} else {
 		state.KV = make(map[string]Value)
 		state.Ips = make(map[string]Node)
@@ -216,14 +221,14 @@ func Init() {
 	checkFlags()
 
 	state.Ips[state.MyIP+":"+state.MyPort] = Node{
-		time:   time.Now().Format(time_format),
-		status: ACTIVATED,
+		Time:   time.Now().Format(time_format),
+		Status: ACTIVATED,
 	}
 
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
 	}
-	//Connections()
+	Connections()
 
 }
 
@@ -305,8 +310,8 @@ func handle(conn net.Conn) {
 			if _, ok := state.Ips[request.IP]; !ok {
 				fmt.Println("new IP")
 				state.Ips[request.IP] = Node{
-					time:   time.Now().Format(time_format),
-					status: ACTIVATED,
+					Time:   time.Now().Format(time_format),
+					Status: ACTIVATED,
 				}
 			}
 			response, err := json.Marshal(state.Ips)
@@ -383,7 +388,7 @@ func main() {
 	go Loop()
 	go listenNodes(c)
 
-	/*clientRouter := gin.Default()
+	clientRouter := gin.Default()
 	clientRouter.GET("/", HomeGetHandler)
 	clientRouter.PUT("/", HomePostHandler)
 	sClient := &http.Server{
@@ -398,7 +403,7 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-	*/
+
 	res := <-c
 	os.Exit(res)
 }

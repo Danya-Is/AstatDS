@@ -2,6 +2,7 @@ package main
 
 import (
 	"AstatDS"
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -28,6 +30,8 @@ var (
 	statePathFlag   = flag.String("s", "", "state path")
 
 	connections map[string]net.Conn
+
+	mapMutex = sync.RWMutex{}
 )
 
 func checkFlags() {
@@ -206,6 +210,11 @@ func Init() {
 	fmt.Println(state)
 	checkFlags()
 
+	state.Ips[state.MyIP+":"+state.MyPort] = Node{
+		time:   time.Now().Format(time_format),
+		status: ACTIVATED,
+	}
+
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
 	}
@@ -214,11 +223,16 @@ func Init() {
 }
 
 func Connections() {
+	connections = make(map[string]net.Conn)
 	for addr := range state.Ips {
-		var err error
-		connections[addr], err = net.Dial("tcp", addr)
-		if err != nil {
-			log.Fatal(err)
+		if addr != state.MyIP+":"+state.MyPort {
+			var err error
+			mapMutex.Lock()
+			connections[addr], err = net.Dial("tcp", addr)
+			if err != nil {
+				log.Println(err)
+			}
+			mapMutex.Unlock()
 		}
 	}
 }
@@ -265,9 +279,9 @@ func Loop() {
 
 func handle(conn net.Conn) {
 	for {
-		//message, err := bufio.NewReader(conn).ReadBytes('\n')
-		var message []byte
-		_, err := conn.Read(message)
+		message, err := bufio.NewReader(conn).ReadBytes('\n')
+		//var message []byte
+		//_, err := conn.Read(message)
 		if err != nil {
 			fmt.Println("server disconnected")
 			return

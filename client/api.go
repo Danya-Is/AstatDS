@@ -36,12 +36,12 @@ func (c *Client) Get(key string) []byte {
 		})
 		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			continue
 		}
 		httpResp, err := client.Do(req)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			continue
 		}
 		respBody, _ := ioutil.ReadAll(httpResp.Body)

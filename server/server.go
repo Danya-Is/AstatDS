@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -144,8 +143,9 @@ func HomeGetHandler(c *gin.Context) {
 	case AstatDS.GET_VALUE:
 		key := request.Key
 		value, ok := state.KV[key]
+		fmt.Println(state)
 		if ok {
-			c.JSON(200, value)
+			c.String(200, value.value)
 		} else {
 			c.JSON(200, gin.H{"key": key, "value": "no value"})
 		}
@@ -158,16 +158,18 @@ func HomeGetHandler(c *gin.Context) {
 func HomePostHandler(c *gin.Context) {
 	body := c.Request.Body
 	value, err := ioutil.ReadAll(body)
-	fmt.Println(string(value))
 	if err != nil {
 		log.Fatal(err)
 	}
 	req := new(AstatDS.Request)
 	err = json.Unmarshal(value, &req)
+	fmt.Println(value)
+	fmt.Println(req)
 	state.KV[req.Key] = Value{
 		time:  time.Now().Format(time_format),
 		value: req.Value,
 	}
+	fmt.Println(state)
 	c.String(200, "OK")
 }
 
@@ -175,7 +177,10 @@ func Init() {
 	home, _ := os.UserHomeDir()
 	flag.Parse()
 	if _, err := os.Stat(home + "/" + *statePathFlag); os.IsNotExist(err) {
-		os.Create(home + "/" + *statePathFlag) // create file if it isn't exist
+		_, err = os.Create(home + "/" + *statePathFlag)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 	fmt.Println(home)
 	file, err := ioutil.ReadFile(home + "/" + *statePathFlag)
@@ -218,7 +223,7 @@ func Init() {
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
 	}
-	Connections()
+	//Connections()
 
 }
 
@@ -286,7 +291,6 @@ func handle(conn net.Conn) {
 			fmt.Println("server disconnected")
 			return
 		}
-		fmt.Println("message" + string(message) + ".")
 		request := new(AstatDS.Request)
 		err = json.Unmarshal([]byte(message), &request)
 		if err != nil {
@@ -297,37 +301,53 @@ func handle(conn net.Conn) {
 
 		switch request.Type {
 		case AstatDS.GET_IPS:
+			fmt.Println(state)
 			if _, ok := state.Ips[request.IP]; !ok {
+				fmt.Println("new IP")
 				state.Ips[request.IP] = Node{
 					time:   time.Now().Format(time_format),
 					status: ACTIVATED,
 				}
 			}
-			response, _ := json.Marshal(state.Ips)
+			response, err := json.Marshal(state.Ips)
+			if err != nil {
+				log.Println(err)
+			}
+			fmt.Println(state)
 			_, err = conn.Write([]byte(string(response) + "\n"))
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 			fmt.Println("got GET_IPS")
 		case AstatDS.GET_KV:
-			response, _ := json.Marshal(state.Ips)
+			response, err := json.Marshal(state.KV)
+			if err != nil {
+				log.Println(err)
+			}
+			fmt.Println(response)
 			_, err = conn.Write([]byte(string(response) + "\n"))
 			if err != nil {
-				return
+				log.Println(err)
 			}
 		case AstatDS.GET_IPS_HASH:
-			str, _ := json.Marshal(state.Ips)
+			str, err := json.Marshal(state.Ips)
 			response := MD5(str)
+			if err != nil {
+				log.Println(err)
+			}
 			_, err = conn.Write([]byte(response + "\n"))
 			if err != nil {
-				return
+				log.Println(err)
 			}
 		case AstatDS.GET_KV_HASH:
-			str, _ := json.Marshal(state.KV)
+			str, err := json.Marshal(state.KV)
+			if err != nil {
+				log.Println(err)
+			}
 			response := MD5(str)
 			_, err = conn.Write([]byte(response + "\n"))
 			if err != nil {
-				return
+				log.Println(err)
 			}
 		}
 	}
@@ -363,7 +383,7 @@ func main() {
 	go Loop()
 	go listenNodes(c)
 
-	clientRouter := gin.Default()
+	/*clientRouter := gin.Default()
 	clientRouter.GET("/", HomeGetHandler)
 	clientRouter.PUT("/", HomePostHandler)
 	sClient := &http.Server{
@@ -378,7 +398,7 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
-
+	*/
 	res := <-c
 	os.Exit(res)
 }

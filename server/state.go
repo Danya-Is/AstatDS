@@ -11,27 +11,27 @@ import (
 )
 
 type State struct {
-	KV           map[string]Value
-	Ips          map[string]Node
-	ClusterName  string `json:"clusterName"`
-	MyIP         string `json:"myIP"`
-	MyClientPort string `json:"myClientPort"`
-	MyPort       string `json:"myPort"`
-	DiscoveryIp  string `json:"discoveryIp"`
-	NodeName     string `json:"nodeName"`
-	StatePath    string `json:"statePath"`
+	KV           map[string]Value `json:"kv"`
+	Ips          map[string]Node  `json:"ips"`
+	ClusterName  string           `json:"clusterName"`
+	MyIP         string           `json:"myIP"`
+	MyClientPort string           `json:"myClientPort"`
+	MyPort       string           `json:"myPort"`
+	DiscoveryIp  string           `json:"discoveryIp"`
+	NodeName     string           `json:"nodeName"`
+	StatePath    string           `json:"statePath"`
 }
 
 var StateHash string
 
 type Node struct {
-	time   string
-	status string
+	time   string `json:"time"`
+	status string `json:"status"`
 }
 
 type Value struct {
-	time  string
-	value string
+	time  string `json:"time"`
+	value string `json:"value"`
 }
 
 const (
@@ -130,12 +130,21 @@ func UpdateIps(ips []map[string]Node) {
 func (state *State) CheckKV() {
 	//обход по нодам
 	var kvs []map[string]Value
-	for addr, conn := range connections {
-		if state.Ips[addr].status == ACTIVATED {
-			str, _ := json.Marshal(AstatDS.Request{
+	for addr := range state.Ips {
+		if state.Ips[addr].status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+			fmt.Println("activated")
+			conn, err := net.Dial("tcp", addr)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			str, err := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_KV_HASH,
 			})
-			_, err := fmt.Fprintf(conn, string(str))
+			if err != nil {
+				log.Println(err)
+			}
+			_, err = fmt.Fprintf(conn, string(str))
 			if err != nil {
 				log.Println(err)
 				state.Ips[addr] = Node{
@@ -147,6 +156,7 @@ func (state *State) CheckKV() {
 			response, _ := bufio.NewReader(conn).ReadString('\n')
 
 			str, _ = json.Marshal(state.Ips)
+			fmt.Println(response + " vs " + string(str))
 			if response != MD5(str) {
 				str, _ := json.Marshal(AstatDS.Request{
 					Type: AstatDS.GET_KV,

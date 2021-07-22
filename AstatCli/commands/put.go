@@ -2,7 +2,7 @@ package commands
 
 import (
 	"AstatDS/client"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli"
 )
 
 func NewPutCommand() *cli.Command {
@@ -24,7 +24,11 @@ func NewPutCommand() *cli.Command {
 }
 
 func put(c *cli.Context) error {
-	config, _ := client.ReadFromDisk()
+	config, err := client.ReadFromDisk()
+	print("readed config\n")
+	if err != nil {
+		panic(err)
+	}
 	clientApi := client.New(config)
 	return clientApi.Put(c.String("key"), c.String("value"))
 }

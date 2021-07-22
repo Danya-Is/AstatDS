@@ -2,6 +2,7 @@ package AstatDS
 
 type Request struct {
 	Type  string
+	IP    string
 	Key   string
 	Value string
 }

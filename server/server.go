@@ -319,15 +319,16 @@ func handle(conn net.Conn) {
 	}
 }
 
-func listenNodes() {
-	ln, err := net.Listen("tcp", ":"+state.MyPort)
+func listenNodes(c chan int) {
+	ln, err := net.Listen("tcp", state.MyIP+":"+state.MyPort)
 	if err != nil {
 		panic(err)
 	}
 	defer func(ln net.Listener) {
 		err := ln.Close()
+		c <- 0
 		if err != nil {
-
+			log.Println(err)
 		}
 	}(ln)
 
@@ -343,13 +344,14 @@ func listenNodes() {
 
 func main() {
 
+	c := make(chan int)
 	Init()
 	go Loop()
+	go listenNodes(c)
 
 	clientRouter := gin.Default()
 	clientRouter.GET("/", HomeGetHandler)
 	clientRouter.PUT("/", HomePostHandler)
-	// r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	sClient := &http.Server{
 		Addr:           state.MyIP + ":" + state.MyClientPort,
 		Handler:        clientRouter,
@@ -360,8 +362,9 @@ func main() {
 
 	err := sClient.ListenAndServe()
 	if err != nil {
-		return
+		log.Println(err)
 	}
 
-	listenNodes()
+	res := <-c
+	os.Exit(res)
 }

@@ -201,17 +201,9 @@ func Init() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		state.Ips[state.MyIP+":"+state.MyPort] = Node{
-			Time:   time.Now().Format(time_format),
-			Status: ACTIVATED,
-		}
 	} else {
 		state.KV = make(map[string]Value)
 		state.Ips = make(map[string]Node)
-		state.Ips[state.MyIP+":"+state.MyPort] = Node{
-			Time:   time.Now().Format(time_format),
-			Status: ACTIVATED,
-		}
 	}
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
@@ -248,6 +240,7 @@ func Connections() {
 			mapMutex.Unlock()
 		}
 	}
+	log.Println("connections = " + string(len(connections)))
 }
 
 func WriteToDisk() {
@@ -314,11 +307,13 @@ func handle(conn net.Conn) {
 		case AstatDS.GET_IPS:
 			mapMutex.Lock()
 			if _, ok := state.Ips[request.IP]; !ok {
+				log.Println("add IP " + request.IP)
 				state.Ips[request.IP] = Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,
 				}
 			} else if state.Ips[request.IP].Status == DEPRECATED {
+				//log.Println("change IP " + request.IP)
 				state.Ips[request.IP] = Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,

@@ -28,7 +28,7 @@ var (
 	nodeNameFlag    = flag.String("n", "", "name of the service")
 	statePathFlag   = flag.String("s", "", "state path")
 
-	connections map[string]net.Conn
+	connections map[string]Conn
 
 	mapMutex = sync.RWMutex{}
 )
@@ -207,14 +207,14 @@ func Init() {
 
 func Connections() {
 	if connections == nil {
-		connections = make(map[string]net.Conn)
+		connections = make(map[string]Conn)
 	}
 	for addr := range state.Ips {
 		if addr != state.MyIP+":"+state.MyPort {
-			var err error
 			mapMutex.Lock()
-			if connections[addr] == nil {
-				connections[addr], err = net.Dial("tcp", addr)
+			if connections[addr].c == nil {
+				newConn, err := net.Dial("tcp", addr)
+				connections[addr] = Conn{c: newConn}
 				if err != nil {
 					log.Println(err)
 				}

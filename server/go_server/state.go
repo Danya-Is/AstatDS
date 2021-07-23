@@ -4,7 +4,6 @@ import (
 	"AstatDS"
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -58,13 +57,11 @@ func (state *State) DiscoveryNodes() {
 		log.Fatal(err)
 	}
 	response, _ := bufio.NewReader(conn).ReadString('\n')
-	fmt.Println(response)
 	err = json.Unmarshal([]byte(response), &state.Ips)
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("nodes discovered")
-	fmt.Println(state)
+
 	err = conn.Close()
 	if err != nil {
 		log.Println(err)
@@ -84,39 +81,30 @@ func (state *State) CheckIps() {
 	var ips []map[string]Node
 	for addr, conn := range connections {
 		mapMutex.Lock()
-		if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-			mapMutex.Unlock()
-			str, _ := json.Marshal(AstatDS.Request{
-				Type: AstatDS.GET_IPS_HASH,
-				IP:   state.MyIP + ":" + state.MyPort,
-			})
+		status := state.Ips[addr].Status
+		mapMutex.Unlock()
 
-			if conn == nil {
-				UpdateNodeStatus(addr, DEPRECATED)
-				continue
-			}
-
-			_, err := fmt.Fprintf(conn, string(str)+"\n")
+		if status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+			err := conn.SentRequest(AstatDS.GET_IPS_HASH)
 			if err != nil {
 				log.Println(err)
-				UpdateNodeStatus(addr, DEPRECATED)
 				continue
 			}
-			response, _ := bufio.NewReader(conn).ReadString('\n')
+			response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
+			str, err := json.Marshal(state.Ips)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 			if response != MD5(str) {
-				str, _ := json.Marshal(AstatDS.Request{
-					Type: AstatDS.GET_IPS,
-					IP:   state.MyIP + ":" + state.MyPort,
-				})
-
-				_, err := fmt.Fprintf(conn, string(str)+"\n")
+				err = conn.SentRequest(AstatDS.GET_IPS)
 				if err != nil {
 					log.Println(err)
-					UpdateNodeStatus(addr, DEPRECATED)
 					continue
 				}
-				response, _ := bufio.NewReader(conn).ReadString('\n')
+				response, _ := bufio.NewReader(conn.c).ReadString('\n')
+
 				ip := new(map[string]Node)
 				err = json.Unmarshal([]byte(response), &ip)
 				if err != nil {
@@ -124,12 +112,8 @@ func (state *State) CheckIps() {
 				}
 				ips = append(ips, *ip)
 			}
-		} else {
-			mapMutex.Unlock()
 		}
-
 	}
-
 	UpdateIps(ips)
 }
 
@@ -159,49 +143,26 @@ func (state *State) CheckKV() {
 	var kvs []map[string]Value
 	for addr, conn := range connections {
 		mapMutex.Lock()
-		log.Println("tuck-tuck to " + addr)
-		//if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-		if addr != state.MyIP+":"+state.MyPort {
-			mapMutex.Unlock()
-			log.Println("sent get_kvs_hash to " + addr)
-			str, err := json.Marshal(AstatDS.Request{
-				Type: AstatDS.GET_KV_HASH,
-				IP:   state.MyIP + ":" + state.MyPort,
-			})
+		status := state.Ips[addr].Status
+		mapMutex.Unlock()
+
+		if status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+			err := conn.SentRequest(AstatDS.GET_KV_HASH)
 			if err != nil {
 				log.Println(err)
-			}
-			if conn == nil {
-				log.Println("conn is nil")
-				UpdateNodeStatus(addr, DEPRECATED)
 				continue
 			}
+			response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
-			_, err = fmt.Fprintf(conn, string(str)+"\n")
-			if err != nil {
-				log.Println(err)
-				UpdateNodeStatus(addr, DEPRECATED)
-				continue
-			}
-			response, _ := bufio.NewReader(conn).ReadString('\n')
-
-			str, _ = json.Marshal(state.KV)
-			log.Println(response + " vs " + MD5(str))
+			str, _ := json.Marshal(state.KV)
 			if response != MD5(str) {
-				str, _ := json.Marshal(AstatDS.Request{
-					Type: AstatDS.GET_KV,
-					IP:   state.MyIP + ":" + state.MyPort,
-				})
-
-				log.Println("sent get_kvs to " + addr)
-				_, err := fmt.Fprintf(conn, string(str)+"\n")
+				err := conn.SentRequest(AstatDS.GET_KV)
 				if err != nil {
 					log.Println(err)
-					UpdateNodeStatus(addr, DEPRECATED)
 					continue
 				}
-				response, _ := bufio.NewReader(conn).ReadString('\n')
-				log.Println(response)
+				response, _ := bufio.NewReader(conn.c).ReadString('\n')
+
 				kv := new(map[string]Value)
 				err = json.Unmarshal([]byte(response), &kv)
 				if err != nil {
@@ -209,12 +170,8 @@ func (state *State) CheckKV() {
 				}
 				kvs = append(kvs, *kv)
 			}
-		} else {
-			mapMutex.Unlock()
 		}
-
 	}
-
 	UpdateKV(kvs)
 }
 

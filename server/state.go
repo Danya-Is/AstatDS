@@ -159,8 +159,11 @@ func (state *State) CheckKV() {
 	var kvs []map[string]Value
 	for addr, conn := range connections {
 		mapMutex.Lock()
-		if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+		log.Println("tuck-tuck to " + addr)
+		//if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+		if addr != state.MyIP+":"+state.MyPort {
 			mapMutex.Unlock()
+			log.Println("sent get_kvs_hash to " + addr)
 			str, err := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_KV_HASH,
 				IP:   state.MyIP + ":" + state.MyPort,
@@ -169,6 +172,7 @@ func (state *State) CheckKV() {
 				log.Println(err)
 			}
 			if conn == nil {
+				log.Println("conn is nil")
 				UpdateNodeStatus(addr, DEPRECATED)
 				continue
 			}
@@ -182,12 +186,14 @@ func (state *State) CheckKV() {
 			response, _ := bufio.NewReader(conn).ReadString('\n')
 
 			str, _ = json.Marshal(state.KV)
+			log.Println(response + " vs " + MD5(str))
 			if response != MD5(str) {
 				str, _ := json.Marshal(AstatDS.Request{
 					Type: AstatDS.GET_KV,
 					IP:   state.MyIP + ":" + state.MyPort,
 				})
 
+				log.Println("sent get_kvs to " + addr)
 				_, err := fmt.Fprintf(conn, string(str)+"\n")
 				if err != nil {
 					log.Println(err)
@@ -195,6 +201,7 @@ func (state *State) CheckKV() {
 					continue
 				}
 				response, _ := bufio.NewReader(conn).ReadString('\n')
+				log.Println(response)
 				kv := new(map[string]Value)
 				err = json.Unmarshal([]byte(response), &kv)
 				if err != nil {

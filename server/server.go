@@ -223,24 +223,27 @@ func Init() {
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
 	}
-	Connections()
-
 }
 
 func Connections() {
-	connections = make(map[string]net.Conn)
+	if connections == nil {
+		connections = make(map[string]net.Conn)
+	}
 	for addr := range state.Ips {
 		if addr != state.MyIP+":"+state.MyPort {
 			var err error
 			mapMutex.Lock()
-			connections[addr], err = net.Dial("tcp", addr)
-			if err != nil {
-				log.Println(err)
+			if connections[addr] == nil {
+				connections[addr], err = net.Dial("tcp", addr)
+				if err != nil {
+					log.Println(err)
+				}
 			}
 			mapMutex.Unlock()
 		}
 	}
-	log.Println("connections = " + string(len(connections)))
+	log.Println("connections = ")
+	log.Println(len(connections))
 }
 
 func WriteToDisk() {
@@ -276,11 +279,13 @@ func WriteToDisk() {
 
 func Loop() {
 	for {
+		Connections()
 		state.CheckIps()
 		state.CheckKV()
 
 		mapMutex.Lock()
 		str, _ := json.Marshal(state)
+
 		mapMutex.Unlock()
 
 		if StateHash != MD5(str) {

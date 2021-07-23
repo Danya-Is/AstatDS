@@ -11,27 +11,27 @@ import (
 )
 
 type State struct {
-	KV           map[string]Value
-	Ips          map[string]Node
-	ClusterName  string `json:"clusterName"`
-	MyIP         string `json:"myIP"`
-	MyClientPort string `json:"myClientPort"`
-	MyPort       string `json:"myPort"`
-	DiscoveryIp  string `json:"discoveryIp"`
-	NodeName     string `json:"nodeName"`
-	StatePath    string `json:"statePath"`
+	KV           map[string]Value `json:"kv"`
+	Ips          map[string]Node  `json:"ips"`
+	ClusterName  string           `json:"clusterName"`
+	MyIP         string           `json:"myIP"`
+	MyClientPort string           `json:"myClientPort"`
+	MyPort       string           `json:"myPort"`
+	DiscoveryIp  string           `json:"discoveryIp"`
+	NodeName     string           `json:"nodeName"`
+	StatePath    string           `json:"statePath"`
 }
 
 var StateHash string
 
 type Node struct {
-	time   string
-	status string
+	Time   string `json:"time"`
+	Status string `json:"status"`
 }
 
 type Value struct {
-	time  string
-	value string
+	Time  string `json:"time"`
+	Value string `json:"value"`
 }
 
 const (
@@ -54,68 +54,94 @@ func (state *State) DiscoveryNodes() {
 		log.Fatal(err)
 	}
 	_, err = conn.Write([]byte(string(str) + "\n"))
-	fmt.Println("str writed")
 	if err != nil {
 		log.Fatal(err)
 	}
 	response, _ := bufio.NewReader(conn).ReadString('\n')
 	fmt.Println(response)
-	json.Unmarshal([]byte(response), &state.Ips)
-	fmt.Println("nodes discovered")
+	err = json.Unmarshal([]byte(response), &state.Ips)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("nodes discovered")
 	fmt.Println(state)
-	conn.Close()
+	err = conn.Close()
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func UpdateNodeStatus(addr string, status string) {
+	mapMutex.Lock()
+	state.Ips[addr] = Node{
+		Status: status,
+		Time:   time.Now().Format(time_format),
+	}
+	mapMutex.Unlock()
 }
 
 func (state *State) CheckIps() {
-	//обход по нодам
 	var ips []map[string]Node
 	for addr, conn := range connections {
-		if state.Ips[addr].status == ACTIVATED {
+		mapMutex.Lock()
+		if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+			mapMutex.Unlock()
 			str, _ := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_IPS_HASH,
 			})
-			_, err := fmt.Fprintf(conn, string(str))
+
+			if conn == nil {
+				UpdateNodeStatus(addr, DEPRECATED)
+				continue
+			}
+
+			_, err := fmt.Fprintf(conn, string(str)+"\n")
 			if err != nil {
 				log.Println(err)
-				state.Ips[addr] = Node{
-					status: DEPRECATED,
-					time:   time.Now().Format(time_format),
-				}
+				UpdateNodeStatus(addr, DEPRECATED)
 				continue
 			}
 			response, _ := bufio.NewReader(conn).ReadString('\n')
 
-			str, _ = json.Marshal(state.Ips)
 			if response != MD5(str) {
 				str, _ := json.Marshal(AstatDS.Request{
 					Type: AstatDS.GET_IPS,
 					IP:   state.MyIP + ":" + state.MyPort,
 				})
-				_, err := fmt.Fprintf(conn, string(str))
+
+				_, err := fmt.Fprintf(conn, string(str)+"\n")
 				if err != nil {
-					panic(err)
+					log.Println(err)
+					UpdateNodeStatus(addr, DEPRECATED)
+					continue
 				}
 				response, _ := bufio.NewReader(conn).ReadString('\n')
 				ip := new(map[string]Node)
-				json.Unmarshal([]byte(response), &ip)
+				err = json.Unmarshal([]byte(response), &ip)
+				if err != nil {
+					log.Println(err)
+				}
 				ips = append(ips, *ip)
 			}
+		} else {
+			mapMutex.Unlock()
 		}
+
 	}
-	//посылаем запрос сервисам GET_IPS
 
 	UpdateIps(ips)
-	//обновляем стэйт
 }
 
 func UpdateIps(ips []map[string]Node) {
+
 	for _, m := range ips {
 		for addr, node := range m {
+			mapMutex.Lock()
 			if _, ok := state.Ips[addr]; !ok {
 				state.Ips[addr] = node
-			} else if n, _ := state.Ips[addr]; n.status != node.status {
-				t, err := time.Parse(time_format, node.time)
-				curT, err := time.Parse(time_format, n.time)
+			} else if n, _ := state.Ips[addr]; n.Status != node.Status {
+				t, err := time.Parse(time_format, node.Time)
+				curT, err := time.Parse(time_format, n.Time)
 				if err != nil {
 					panic(err)
 				}
@@ -123,62 +149,77 @@ func UpdateIps(ips []map[string]Node) {
 					state.Ips[addr] = node
 				}
 			}
+			mapMutex.Unlock()
 		}
 	}
 }
 
 func (state *State) CheckKV() {
-	//обход по нодам
 	var kvs []map[string]Value
 	for addr, conn := range connections {
-		if state.Ips[addr].status == ACTIVATED {
-			str, _ := json.Marshal(AstatDS.Request{
+		mapMutex.Lock()
+		if state.Ips[addr].Status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
+			mapMutex.Unlock()
+			str, err := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_KV_HASH,
 			})
-			_, err := fmt.Fprintf(conn, string(str))
 			if err != nil {
 				log.Println(err)
-				state.Ips[addr] = Node{
-					status: DEPRECATED,
-					time:   time.Now().Format(time_format),
-				}
+			}
+			if conn == nil {
+				UpdateNodeStatus(addr, DEPRECATED)
+				continue
+			}
+
+			_, err = fmt.Fprintf(conn, string(str)+"\n")
+			if err != nil {
+				log.Println(err)
+				UpdateNodeStatus(addr, DEPRECATED)
 				continue
 			}
 			response, _ := bufio.NewReader(conn).ReadString('\n')
 
-			str, _ = json.Marshal(state.Ips)
+			str, _ = json.Marshal(state.KV)
 			if response != MD5(str) {
 				str, _ := json.Marshal(AstatDS.Request{
 					Type: AstatDS.GET_KV,
 					IP:   state.MyIP + ":" + state.MyPort,
 				})
-				_, err := fmt.Fprintf(conn, string(str))
+
+				_, err := fmt.Fprintf(conn, string(str)+"\n")
 				if err != nil {
-					panic(err)
+					log.Println(err)
+					UpdateNodeStatus(addr, DEPRECATED)
+					continue
 				}
 				response, _ := bufio.NewReader(conn).ReadString('\n')
 				kv := new(map[string]Value)
-				json.Unmarshal([]byte(response), &kv)
+				err = json.Unmarshal([]byte(response), &kv)
+				if err != nil {
+					log.Println(err)
+				}
 				kvs = append(kvs, *kv)
 			}
+		} else {
+			mapMutex.Unlock()
 		}
+
 	}
-	//отправляем запрос GET_KV
 
 	UpdateKV(kvs)
-	//обновляем стэйт
 }
 
 func UpdateKV(kvs []map[string]Value) {
+	mapMutex.Lock()
 	for _, kv := range kvs {
 		for k, v := range kv {
 			if _, ok := state.KV[k]; !ok {
 				state.KV[k] = v
-			} else if value, _ := state.KV[k]; value.value != v.value {
-				t, err := time.Parse(time_format, v.time)
-				curT, err := time.Parse(time_format, value.time)
+			} else if value, _ := state.KV[k]; value.Value != v.Value {
+				t, err := time.Parse(time_format, v.Time)
+				curT, err := time.Parse(time_format, value.Time)
 				if err != nil {
-					panic(err)
+					log.Println(err)
 				}
 				if t.After(curT) {
 					state.KV[k] = v
@@ -186,4 +227,5 @@ func UpdateKV(kvs []map[string]Value) {
 			}
 		}
 	}
+	mapMutex.Unlock()
 }

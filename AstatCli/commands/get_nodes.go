@@ -2,7 +2,6 @@ package commands
 
 import (
 	"AstatDS/client"
-	"encoding/json"
 	"fmt"
 	"github.com/urfave/cli"
 )
@@ -26,11 +25,7 @@ func getNodes(c *cli.Context) error {
 	config, _ := client.ReadFromDisk()
 	clientApi := client.New(config)
 	respBody := clientApi.GetNodes()
-	resp := new(interface{})
-	err := json.Unmarshal(respBody, resp)
-	if err != nil {
-		return err
-	}
-	fmt.Print(resp)
+
+	fmt.Print(respBody)
 	return nil
 }

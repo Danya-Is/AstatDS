@@ -134,7 +134,6 @@ func checkFlags() {
 func HomeGetHandler(c *gin.Context) {
 	body := c.Request.Body
 	data, err := ioutil.ReadAll(body)
-	fmt.Println(string(data))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -144,13 +143,15 @@ func HomeGetHandler(c *gin.Context) {
 	case AstatDS.GET_VALUE:
 		key := request.Key
 		value, ok := state.KV[key]
+		fmt.Println(state)
 		if ok {
-			c.JSON(200, value)
+			c.String(200, value.Value)
 		} else {
 			c.JSON(200, gin.H{"key": key, "value": "no value"})
 		}
 	case AstatDS.GET_NODES:
-		c.JSON(200, state.Ips)
+		data, _ := json.Marshal(state.Ips)
+		c.String(200, string(data))
 
 	}
 }
@@ -158,16 +159,16 @@ func HomeGetHandler(c *gin.Context) {
 func HomePostHandler(c *gin.Context) {
 	body := c.Request.Body
 	value, err := ioutil.ReadAll(body)
-	fmt.Println(string(value))
 	if err != nil {
 		log.Fatal(err)
 	}
 	req := new(AstatDS.Request)
 	err = json.Unmarshal(value, &req)
 	state.KV[req.Key] = Value{
-		time:  time.Now().Format(time_format),
-		value: req.Value,
+		Time:  time.Now().Format(time_format),
+		Value: req.Value,
 	}
+	fmt.Println(state)
 	c.String(200, "OK")
 }
 
@@ -175,13 +176,17 @@ func Init() {
 	home, _ := os.UserHomeDir()
 	flag.Parse()
 	if _, err := os.Stat(home + "/" + *statePathFlag); os.IsNotExist(err) {
-		os.Create(home + "/" + *statePathFlag) // create file if it isn't exist
+		_, err = os.Create(home + "/" + *statePathFlag)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 	fmt.Println(home)
 	file, err := ioutil.ReadFile(home + "/" + *statePathFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if len(file) > 0 { // that means if file is not empty
 		data := strings.Split(string(file), "\n")
 		hashDec, err := base64.StdEncoding.DecodeString(data[0])
@@ -196,9 +201,17 @@ func Init() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		state.Ips[state.MyIP+":"+state.MyPort] = Node{
+			Time:   time.Now().Format(time_format),
+			Status: ACTIVATED,
+		}
 	} else {
 		state.KV = make(map[string]Value)
 		state.Ips = make(map[string]Node)
+		state.Ips[state.MyIP+":"+state.MyPort] = Node{
+			Time:   time.Now().Format(time_format),
+			Status: ACTIVATED,
+		}
 	}
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
@@ -211,8 +224,8 @@ func Init() {
 	checkFlags()
 
 	state.Ips[state.MyIP+":"+state.MyPort] = Node{
-		time:   time.Now().Format(time_format),
-		status: ACTIVATED,
+		Time:   time.Now().Format(time_format),
+		Status: ACTIVATED,
 	}
 
 	if len(state.DiscoveryIp) > 0 {
@@ -239,16 +252,20 @@ func Connections() {
 
 func WriteToDisk() {
 	home, _ := os.UserHomeDir()
+	mapMutex.Lock()
 	jsonstate, err := json.Marshal(state)
+	mapMutex.Unlock()
 	if err != nil {
 		log.Fatal(err)
 	}
 	stateEnc := base64.StdEncoding.EncodeToString(jsonstate)
 	// overwriting content
 
+	mapMutex.Lock()
 	file, err := os.Create(home + "/" + state.StatePath)
+	mapMutex.Unlock()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	StateHashEnc := base64.StdEncoding.EncodeToString([]byte(StateHash))
 	_, err = file.WriteString(StateHashEnc + "\n") // write StateHash as a first string
@@ -269,7 +286,10 @@ func Loop() {
 		state.CheckIps()
 		state.CheckKV()
 
+		mapMutex.Lock()
 		str, _ := json.Marshal(state)
+		mapMutex.Unlock()
+
 		if StateHash != MD5(str) {
 			StateHash = MD5(str)
 			WriteToDisk()
@@ -280,54 +300,73 @@ func Loop() {
 func handle(conn net.Conn) {
 	for {
 		message, err := bufio.NewReader(conn).ReadBytes('\n')
-		//var message []byte
-		//_, err := conn.Read(message)
 		if err != nil {
 			fmt.Println("server disconnected")
 			return
 		}
-		fmt.Println("message" + string(message) + ".")
 		request := new(AstatDS.Request)
-		err = json.Unmarshal([]byte(message), &request)
+		err = json.Unmarshal(message, &request)
 		if err != nil {
-			return
+			log.Println(err)
 		}
-
-		fmt.Println(request)
 
 		switch request.Type {
 		case AstatDS.GET_IPS:
+			mapMutex.Lock()
 			if _, ok := state.Ips[request.IP]; !ok {
 				state.Ips[request.IP] = Node{
-					time:   time.Now().Format(time_format),
-					status: ACTIVATED,
+					Time:   time.Now().Format(time_format),
+					Status: ACTIVATED,
+				}
+			} else if state.Ips[request.IP].Status == DEPRECATED {
+				state.Ips[request.IP] = Node{
+					Time:   time.Now().Format(time_format),
+					Status: ACTIVATED,
 				}
 			}
-			response, _ := json.Marshal(state.Ips)
-			_, err = conn.Write([]byte(string(response) + "\n"))
+			response, err := json.Marshal(state.Ips)
 			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println("got GET_IPS")
-		case AstatDS.GET_KV:
-			response, _ := json.Marshal(state.Ips)
-			_, err = conn.Write([]byte(string(response) + "\n"))
-			if err != nil {
+				log.Println(err)
 				return
+			}
+			mapMutex.Unlock()
+			_, err = conn.Write([]byte(string(response) + "\n"))
+			if err != nil {
+				log.Println(err)
+			}
+		case AstatDS.GET_KV:
+			response, err := json.Marshal(state.KV)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			_, err = conn.Write([]byte(string(response) + "\n"))
+			if err != nil {
+				log.Println(err)
 			}
 		case AstatDS.GET_IPS_HASH:
-			str, _ := json.Marshal(state.Ips)
+			mapMutex.Lock()
+			str, err := json.Marshal(state.Ips)
+			mapMutex.Unlock()
 			response := MD5(str)
-			_, err = conn.Write([]byte(response + "\n"))
 			if err != nil {
+				log.Println(err)
 				return
 			}
+			_, err = conn.Write([]byte(response + "\n"))
+			if err != nil {
+				log.Println(err)
+			}
 		case AstatDS.GET_KV_HASH:
-			str, _ := json.Marshal(state.KV)
+			str, err := json.Marshal(state.KV)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 			response := MD5(str)
 			_, err = conn.Write([]byte(response + "\n"))
 			if err != nil {
-				return
+				log.Println(err)
 			}
 		}
 	}

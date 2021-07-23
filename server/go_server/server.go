@@ -3,7 +3,6 @@ package go_server
 import (
 	"AstatDS"
 	"bufio"
-	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -172,39 +171,7 @@ func HomePostHandler(c *gin.Context) {
 	c.String(200, "OK")
 }
 
-func Init() {
-	home, _ := os.UserHomeDir()
-	flag.Parse()
-	if _, err := os.Stat(home + "/" + *statePathFlag); os.IsNotExist(err) {
-		_, err = os.Create(home + "/" + *statePathFlag)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	fmt.Println(home)
-	file, err := ioutil.ReadFile(home + "/" + *statePathFlag)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if len(file) > 0 { // that means if file is not empty
-		data := strings.Split(string(file), "\n")
-		hashDec, err := base64.StdEncoding.DecodeString(data[0])
-		if err != nil {
-			log.Fatal(err)
-		}
-		StateHash = string(hashDec)
-		fmt.Println("StateHash: " + StateHash)
-		stateDec, err := base64.StdEncoding.DecodeString(data[1])
-		fmt.Println("State: " + string(stateDec))
-		err = json.Unmarshal(stateDec, &state)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		state.KV = make(map[string]Value)
-		state.Ips = make(map[string]Node)
-	}
+func ReadFlags() {
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
 	state.DiscoveryIp = *discoveryIpFlag
@@ -212,13 +179,26 @@ func Init() {
 	state.NodeName = *nodeNameFlag
 	state.StatePath = *statePathFlag
 	state.MyIP = *ipFlag
-	fmt.Println(state)
+}
+
+func Init() {
+
+	file, err := ReadFile(*statePathFlag)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(file) > 0 {
+		ReadState(file)
+	} else {
+		state.KV = make(map[string]Value)
+		state.Ips = make(map[string]Node)
+	}
+
+	ReadFlags()
 	checkFlags()
 
-	state.Ips[state.MyIP+":"+state.MyPort] = Node{
-		Time:   time.Now().Format(time_format),
-		Status: ACTIVATED,
-	}
+	UpdateNodeStatus(state.MyIP+":"+state.MyPort, ACTIVATED)
 
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
@@ -246,37 +226,6 @@ func Connections() {
 	log.Println(len(connections))
 }
 
-func WriteToDisk() {
-	home, _ := os.UserHomeDir()
-	mapMutex.Lock()
-	jsonstate, err := json.Marshal(state)
-	mapMutex.Unlock()
-	if err != nil {
-		log.Fatal(err)
-	}
-	stateEnc := base64.StdEncoding.EncodeToString(jsonstate)
-	// overwriting content
-
-	mapMutex.Lock()
-	file, err := os.Create(home + "/" + state.StatePath)
-	mapMutex.Unlock()
-	if err != nil {
-		log.Println(err)
-	}
-	StateHashEnc := base64.StdEncoding.EncodeToString([]byte(StateHash))
-	_, err = file.WriteString(StateHashEnc + "\n") // write StateHash as a first string
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = file.WriteString(stateEnc) // write State encoded in base64 as a second string
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := file.Close(); err != nil {
-		log.Fatal(err)
-	}
-}
-
 func Loop() {
 	for {
 		Connections()
@@ -285,13 +234,14 @@ func Loop() {
 
 		mapMutex.Lock()
 		str, _ := json.Marshal(state)
-
 		mapMutex.Unlock()
 
 		if StateHash != MD5(str) {
 			StateHash = MD5(str)
 			WriteToDisk()
 		}
+
+		time.Sleep(1000)
 	}
 }
 

@@ -1,7 +1,7 @@
 package client
 
 import (
-	"AstatDS"
+	"AstatDS/server"
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
@@ -30,8 +30,8 @@ func New(config *Config) Client {
 func (c *Client) Get(key string) []byte {
 	client := &http.Client{}
 	for i := 0; i < len(c.Endpoints); i++ {
-		reqBody, _ := json.Marshal(AstatDS.Request{
-			Type: AstatDS.GET_VALUE,
+		reqBody, _ := json.Marshal(server.Request{
+			Type: server.GET_VALUE,
 			Key:  key,
 		})
 		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
@@ -54,8 +54,8 @@ func (c *Client) Put(key string, value string) error {
 	client := &http.Client{}
 	for i := 0; i < len(c.Endpoints); i++ {
 		reqBody, err := json.Marshal(
-			AstatDS.Request{
-				Type:  AstatDS.PUT_VALUE,
+			server.Request{
+				Type:  server.PUT_VALUE,
 				Key:   key,
 				Value: value,
 			})
@@ -80,8 +80,8 @@ func (c *Client) Put(key string, value string) error {
 func (c *Client) GetNodes() []byte {
 	client := &http.Client{}
 	for i := 0; i < len(c.Endpoints); i++ {
-		reqBody, _ := json.Marshal(AstatDS.Request{
-			Type: AstatDS.GET_NODES,
+		reqBody, _ := json.Marshal(server.Request{
+			Type: server.GET_NODES,
 		})
 		req, err := http.NewRequest("GET", "http://"+c.Endpoints[i], bytes.NewReader(reqBody))
 		if err != nil {

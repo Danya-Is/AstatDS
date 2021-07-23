@@ -1,7 +1,7 @@
 package go_server
 
 import (
-	"AstatDS"
+	"AstatDS/server"
 	"bufio"
 	"encoding/json"
 	"log"
@@ -47,8 +47,8 @@ func (state *State) DiscoveryNodes() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	str, err := json.Marshal(AstatDS.Request{
-		Type: AstatDS.GET_IPS,
+	str, err := json.Marshal(server.Request{
+		Type: server.GET_IPS,
 		IP:   state.MyIP + ":" + state.MyPort,
 	})
 	if err != nil {
@@ -87,7 +87,7 @@ func (state *State) CheckIps() {
 		mapMutex.Unlock()
 
 		if status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-			err := conn.SentRequest(AstatDS.GET_IPS_HASH)
+			err := conn.SentRequest(server.GET_IPS_HASH)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -100,7 +100,7 @@ func (state *State) CheckIps() {
 				continue
 			}
 			if response != MD5(str) {
-				err = conn.SentRequest(AstatDS.GET_IPS)
+				err = conn.SentRequest(server.GET_IPS)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -149,7 +149,7 @@ func (state *State) CheckKV() {
 		mapMutex.Unlock()
 
 		if status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-			err := conn.SentRequest(AstatDS.GET_KV_HASH)
+			err := conn.SentRequest(server.GET_KV_HASH)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -158,7 +158,7 @@ func (state *State) CheckKV() {
 
 			str, _ := json.Marshal(state.KV)
 			if response != MD5(str) {
-				err := conn.SentRequest(AstatDS.GET_KV)
+				err := conn.SentRequest(server.GET_KV)
 				if err != nil {
 					log.Println(err)
 					continue

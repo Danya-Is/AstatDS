@@ -1,7 +1,7 @@
 package go_server
 
 import (
-	"AstatDS"
+	"AstatDS/server"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +16,7 @@ type Conn struct {
 }
 
 func (conn *Conn) SentRequest(reqName string) error {
-	str, _ := json.Marshal(AstatDS.Request{
+	str, _ := json.Marshal(server.Request{
 		Type: reqName,
 		IP:   state.MyIP + ":" + state.MyPort,
 	})

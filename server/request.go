@@ -1,4 +1,4 @@
-package AstatDS
+package server
 
 type Request struct {
 	Type  string

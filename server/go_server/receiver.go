@@ -1,7 +1,7 @@
 package go_server
 
 import (
-	"AstatDS"
+	"AstatDS/server"
 	"bufio"
 	"encoding/json"
 	"fmt"
@@ -15,7 +15,7 @@ func sentHash(conn net.Conn, reqName string) error {
 		str []byte
 		err error
 	)
-	if reqName == AstatDS.GET_IPS_HASH {
+	if reqName == server.GET_IPS_HASH {
 		mapMutex.Lock()
 		str, err = json.Marshal(state.Ips)
 		mapMutex.Unlock()
@@ -41,13 +41,13 @@ func handle(conn net.Conn) {
 			log.Println("server disconnected")
 			return
 		}
-		request := new(AstatDS.Request)
+		request := new(server.Request)
 		err = json.Unmarshal(message, &request)
 		if err != nil {
 			log.Println(err)
 		}
 
-		if request.Type == AstatDS.GET_IPS {
+		if request.Type == server.GET_IPS {
 			mapMutex.Lock()
 			if _, ok := state.Ips[request.IP]; !ok {
 				state.Ips[request.IP] = Node{
@@ -70,7 +70,7 @@ func handle(conn net.Conn) {
 			if err != nil {
 				log.Println(err)
 			}
-		} else if request.Type == AstatDS.GET_KV {
+		} else if request.Type == server.GET_KV {
 			response, err := json.Marshal(state.KV)
 			if err != nil {
 				log.Println(err)

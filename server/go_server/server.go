@@ -7,14 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -27,10 +25,6 @@ var (
 	clusterNameFlag = flag.String("c", "DefaultCluster", "name of the cluster to which service belongs")
 	nodeNameFlag    = flag.String("n", "", "name of the service")
 	statePathFlag   = flag.String("s", "", "state path")
-
-	connections map[string]Conn
-
-	mapMutex = sync.RWMutex{}
 )
 
 func checkFlags() {
@@ -130,47 +124,6 @@ func checkFlags() {
 	}
 }
 
-func HomeGetHandler(c *gin.Context) {
-	body := c.Request.Body
-	data, err := ioutil.ReadAll(body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	request := new(AstatDS.Request)
-	err = json.Unmarshal(data, &request)
-	switch request.Type {
-	case AstatDS.GET_VALUE:
-		key := request.Key
-		value, ok := state.KV[key]
-		fmt.Println(state)
-		if ok {
-			c.String(200, value.Value)
-		} else {
-			c.JSON(200, gin.H{"key": key, "value": "no value"})
-		}
-	case AstatDS.GET_NODES:
-		data, _ := json.Marshal(state.Ips)
-		c.String(200, string(data))
-
-	}
-}
-
-func HomePostHandler(c *gin.Context) {
-	body := c.Request.Body
-	value, err := ioutil.ReadAll(body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	req := new(AstatDS.Request)
-	err = json.Unmarshal(value, &req)
-	state.KV[req.Key] = Value{
-		Time:  time.Now().Format(time_format),
-		Value: req.Value,
-	}
-	fmt.Println(state)
-	c.String(200, "OK")
-}
-
 func ReadFlags() {
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
@@ -205,30 +158,9 @@ func Init() {
 	}
 }
 
-func Connections() {
-	if connections == nil {
-		connections = make(map[string]Conn)
-	}
-	for addr := range state.Ips {
-		if addr != state.MyIP+":"+state.MyPort {
-			mapMutex.Lock()
-			if connections[addr].c == nil {
-				newConn, err := net.Dial("tcp", addr)
-				connections[addr] = Conn{c: newConn}
-				if err != nil {
-					log.Println(err)
-				}
-			}
-			mapMutex.Unlock()
-		}
-	}
-	log.Println("connections = ")
-	log.Println(len(connections))
-}
-
 func Loop() {
 	for {
-		Connections()
+		UpdateConnections()
 		state.CheckIps()
 		state.CheckKV()
 

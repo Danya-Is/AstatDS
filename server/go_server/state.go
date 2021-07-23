@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -21,6 +22,7 @@ type State struct {
 	StatePath    string           `json:"statePath"`
 }
 
+var mapMutex = sync.RWMutex{}
 var StateHash string
 
 type Node struct {

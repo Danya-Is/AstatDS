@@ -1,4 +1,4 @@
-package main
+package go_server
 
 import (
 	"crypto/md5"

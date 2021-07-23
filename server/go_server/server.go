@@ -1,14 +1,11 @@
 package go_server
 
 import (
-	"AstatDS"
-	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -174,106 +171,6 @@ func Loop() {
 		}
 
 		time.Sleep(1000)
-	}
-}
-
-func handle(conn net.Conn) {
-	for {
-		message, err := bufio.NewReader(conn).ReadBytes('\n')
-		if err != nil {
-			fmt.Println("server disconnected")
-			return
-		}
-		request := new(AstatDS.Request)
-		err = json.Unmarshal(message, &request)
-		if err != nil {
-			log.Println(err)
-		}
-
-		switch request.Type {
-		case AstatDS.GET_IPS:
-			mapMutex.Lock()
-			if _, ok := state.Ips[request.IP]; !ok {
-				log.Println("add IP " + request.IP)
-				state.Ips[request.IP] = Node{
-					Time:   time.Now().Format(time_format),
-					Status: ACTIVATED,
-				}
-			} else if state.Ips[request.IP].Status == DEPRECATED {
-				//log.Println("change IP " + request.IP)
-				state.Ips[request.IP] = Node{
-					Time:   time.Now().Format(time_format),
-					Status: ACTIVATED,
-				}
-			}
-			response, err := json.Marshal(state.Ips)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			mapMutex.Unlock()
-			_, err = conn.Write([]byte(string(response) + "\n"))
-			if err != nil {
-				log.Println(err)
-			}
-		case AstatDS.GET_KV:
-			response, err := json.Marshal(state.KV)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			_, err = conn.Write([]byte(string(response) + "\n"))
-			if err != nil {
-				log.Println(err)
-			}
-		case AstatDS.GET_IPS_HASH:
-			mapMutex.Lock()
-			str, err := json.Marshal(state.Ips)
-			mapMutex.Unlock()
-			response := MD5(str)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			_, err = conn.Write([]byte(response + "\n"))
-			if err != nil {
-				log.Println(err)
-			}
-		case AstatDS.GET_KV_HASH:
-			str, err := json.Marshal(state.KV)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			response := MD5(str)
-			_, err = conn.Write([]byte(response + "\n"))
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}
-}
-
-func listenNodes(c chan int) {
-	ln, err := net.Listen("tcp", state.MyIP+":"+state.MyPort)
-	if err != nil {
-		panic(err)
-	}
-	defer func(ln net.Listener) {
-		err := ln.Close()
-		c <- 0
-		if err != nil {
-			log.Println(err)
-		}
-	}(ln)
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("new conn")
-		go handle(conn)
 	}
 }
 

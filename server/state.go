@@ -88,6 +88,7 @@ func (state *State) CheckIps() {
 			mapMutex.Unlock()
 			str, _ := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_IPS_HASH,
+				IP:   state.MyIP + ":" + state.MyPort,
 			})
 
 			if conn == nil {
@@ -162,6 +163,7 @@ func (state *State) CheckKV() {
 			mapMutex.Unlock()
 			str, err := json.Marshal(AstatDS.Request{
 				Type: AstatDS.GET_KV_HASH,
+				IP:   state.MyIP + ":" + state.MyPort,
 			})
 			if err != nil {
 				log.Println(err)

@@ -26,6 +26,6 @@ func getNodes(c *cli.Context) error {
 	clientApi := client.New(config)
 	respBody := clientApi.GetNodes()
 
-	fmt.Print(respBody)
+	fmt.Print(string(respBody))
 	return nil
 }

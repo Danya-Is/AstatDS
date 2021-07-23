@@ -151,7 +151,8 @@ func HomeGetHandler(c *gin.Context) {
 			c.JSON(200, gin.H{"key": key, "value": "no value"})
 		}
 	case AstatDS.GET_NODES:
-		c.JSON(200, state.Ips)
+		data, _ := json.Marshal(state.Ips)
+		c.String(200, string(data))
 
 	}
 }
@@ -297,16 +298,14 @@ func handle(conn net.Conn) {
 			return
 		}
 		request := new(AstatDS.Request)
-		err = json.Unmarshal([]byte(message), &request)
+		err = json.Unmarshal(message, &request)
 		if err != nil {
-			return
+			log.Println(err)
 		}
-
-		fmt.Println(request)
 
 		switch request.Type {
 		case AstatDS.GET_IPS:
-			fmt.Println(state)
+			mapMutex.Lock()
 			if _, ok := state.Ips[request.IP]; !ok {
 				fmt.Println("new IP")
 				state.Ips[request.IP] = Node{
@@ -317,17 +316,18 @@ func handle(conn net.Conn) {
 			response, err := json.Marshal(state.Ips)
 			if err != nil {
 				log.Println(err)
+				return
 			}
-			fmt.Println(state)
+			mapMutex.Unlock()
 			_, err = conn.Write([]byte(string(response) + "\n"))
 			if err != nil {
 				log.Println(err)
 			}
-			fmt.Println("got GET_IPS")
 		case AstatDS.GET_KV:
 			response, err := json.Marshal(state.KV)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 			fmt.Println(response)
 			_, err = conn.Write([]byte(string(response) + "\n"))
@@ -335,10 +335,13 @@ func handle(conn net.Conn) {
 				log.Println(err)
 			}
 		case AstatDS.GET_IPS_HASH:
+			mapMutex.Lock()
 			str, err := json.Marshal(state.Ips)
+			mapMutex.Unlock()
 			response := MD5(str)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 			_, err = conn.Write([]byte(response + "\n"))
 			if err != nil {
@@ -348,6 +351,7 @@ func handle(conn net.Conn) {
 			str, err := json.Marshal(state.KV)
 			if err != nil {
 				log.Println(err)
+				return
 			}
 			response := MD5(str)
 			_, err = conn.Write([]byte(response + "\n"))

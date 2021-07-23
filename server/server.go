@@ -134,7 +134,6 @@ func checkFlags() {
 func HomeGetHandler(c *gin.Context) {
 	body := c.Request.Body
 	data, err := ioutil.ReadAll(body)
-	fmt.Println(string(data))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -165,8 +164,6 @@ func HomePostHandler(c *gin.Context) {
 	}
 	req := new(AstatDS.Request)
 	err = json.Unmarshal(value, &req)
-	fmt.Println(value)
-	fmt.Println(req)
 	state.KV[req.Key] = Value{
 		Time:  time.Now().Format(time_format),
 		Value: req.Value,
@@ -189,6 +186,7 @@ func Init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if len(file) > 0 { // that means if file is not empty
 		data := strings.Split(string(file), "\n")
 		hashDec, err := base64.StdEncoding.DecodeString(data[0])
@@ -210,6 +208,10 @@ func Init() {
 	} else {
 		state.KV = make(map[string]Value)
 		state.Ips = make(map[string]Node)
+		state.Ips[state.MyIP+":"+state.MyPort] = Node{
+			Time:   time.Now().Format(time_format),
+			Status: ACTIVATED,
+		}
 	}
 	state.MyClientPort = *clientPortFlag
 	state.MyPort = *myPortFlag
@@ -250,16 +252,20 @@ func Connections() {
 
 func WriteToDisk() {
 	home, _ := os.UserHomeDir()
+	mapMutex.Lock()
 	jsonstate, err := json.Marshal(state)
+	mapMutex.Unlock()
 	if err != nil {
 		log.Fatal(err)
 	}
 	stateEnc := base64.StdEncoding.EncodeToString(jsonstate)
 	// overwriting content
 
+	mapMutex.Lock()
 	file, err := os.Create(home + "/" + state.StatePath)
+	mapMutex.Unlock()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	StateHashEnc := base64.StdEncoding.EncodeToString([]byte(StateHash))
 	_, err = file.WriteString(StateHashEnc + "\n") // write StateHash as a first string
@@ -280,7 +286,10 @@ func Loop() {
 		state.CheckIps()
 		state.CheckKV()
 
+		mapMutex.Lock()
 		str, _ := json.Marshal(state)
+		mapMutex.Unlock()
+
 		if StateHash != MD5(str) {
 			StateHash = MD5(str)
 			WriteToDisk()
@@ -291,8 +300,6 @@ func Loop() {
 func handle(conn net.Conn) {
 	for {
 		message, err := bufio.NewReader(conn).ReadBytes('\n')
-		//var message []byte
-		//_, err := conn.Read(message)
 		if err != nil {
 			fmt.Println("server disconnected")
 			return
@@ -307,7 +314,11 @@ func handle(conn net.Conn) {
 		case AstatDS.GET_IPS:
 			mapMutex.Lock()
 			if _, ok := state.Ips[request.IP]; !ok {
-				fmt.Println("new IP")
+				state.Ips[request.IP] = Node{
+					Time:   time.Now().Format(time_format),
+					Status: ACTIVATED,
+				}
+			} else if state.Ips[request.IP].Status == DEPRECATED {
 				state.Ips[request.IP] = Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,
@@ -329,7 +340,6 @@ func handle(conn net.Conn) {
 				log.Println(err)
 				return
 			}
-			fmt.Println(response)
 			_, err = conn.Write([]byte(string(response) + "\n"))
 			if err != nil {
 				log.Println(err)

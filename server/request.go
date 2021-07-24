@@ -16,6 +16,6 @@ const (
 	/*запросы между серверами*/
 	GET_IPS      = "get ips request"
 	GET_IPS_HASH = "get ips hash request"
-	GET_KV       = "get kvs request"
+	GET_KV       = "get kvs request" //также используется клиентом для запроса всей бд
 	GET_KV_HASH  = "get kvs hash request"
 )

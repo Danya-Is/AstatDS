@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"AstatDS/AstatCli/commands"
@@ -16,6 +17,7 @@ func Start() error {
 		commands.NewPutCommand(),
 		commands.NewGetCommand(),
 		commands.NewGetNodesCommand(),
+		commands.NewLSCommand(),
 	}
 	return app.Run(os.Args)
 }
@@ -23,6 +25,6 @@ func Start() error {
 func main() {
 	err := Start()
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 }

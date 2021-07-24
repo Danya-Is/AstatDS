@@ -31,6 +31,9 @@ func HomeGetHandler(c *gin.Context) {
 	case server.GET_NODES:
 		data, _ := json.Marshal(state.Ips)
 		c.String(200, string(data))
+	case server.GET_KV:
+		data, _ := json.Marshal(state.KV)
+		c.String(200, string(data))
 
 	}
 }

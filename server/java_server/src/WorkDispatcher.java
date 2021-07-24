@@ -49,6 +49,7 @@ class ClientSock extends Thread {
             System.out.println(e.getMessage());
             Server.State.Ips.getJSONObject(ip).put("status", deprecated);
             Server.update();
+            WorkDispatcher.clientList.remove(this);
             socket.close();
         }
     }
@@ -98,6 +99,7 @@ class ClientSock extends Thread {
             System.out.println(e.getMessage());
             Server.State.Ips.getJSONObject(ip).put("status", deprecated);
             Server.update();
+            WorkDispatcher.clientList.remove(this);
             socket.close();
         }
     }
@@ -165,6 +167,9 @@ public class WorkDispatcher extends Thread {
                 }
             }
             if (flag) {continue;}
+            if (Server.State.Ips.getJSONObject(nod).getString("status").equals(deprecated)) {
+                continue;
+            }
             try {
                 clientList.add(new ClientSock(new Socket(nod.split(":")[0], Integer.parseInt(nod.split(":")[1])), nod));
             } catch (IOException e) {

@@ -2,7 +2,6 @@ package client
 
 import (
 	"AstatDS/server"
-	"AstatDS/server/go_server"
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
@@ -101,7 +100,7 @@ func (c *Client) GetNodes() []byte {
 		return nil
 	}
 
-	ips := make(map[string]go_server.Node)
+	ips := make(map[string]server.Node)
 	err = json.Unmarshal(respBody, &ips)
 	if err != nil {
 		return nil
@@ -130,7 +129,7 @@ func (c *Client) GetKVs() []byte {
 		return nil
 	}
 
-	kvs := make(map[string]go_server.Value)
+	kvs := make(map[string]server.Value)
 	err = json.Unmarshal(respBody, &kvs)
 	if err != nil {
 		return nil

@@ -1,4 +1,4 @@
-package go_server
+package main
 
 import (
 	"AstatDS/server"
@@ -11,29 +11,19 @@ import (
 )
 
 type State struct {
-	KV           map[string]Value `json:"kv"`
-	Ips          map[string]Node  `json:"ips"`
-	ClusterName  string           `json:"clusterName"`
-	MyIP         string           `json:"myIP"`
-	MyClientPort string           `json:"myClientPort"`
-	MyPort       string           `json:"myPort"`
-	DiscoveryIp  string           `json:"discoveryIp"`
-	NodeName     string           `json:"nodeName"`
-	StatePath    string           `json:"statePath"`
+	KV           map[string]server.Value `json:"kv"`
+	Ips          map[string]server.Node  `json:"ips"`
+	ClusterName  string                  `json:"clusterName"`
+	MyIP         string                  `json:"myIP"`
+	MyClientPort string                  `json:"myClientPort"`
+	MyPort       string                  `json:"myPort"`
+	DiscoveryIp  string                  `json:"discoveryIp"`
+	NodeName     string                  `json:"nodeName"`
+	StatePath    string                  `json:"statePath"`
 }
 
 var mapMutex = sync.RWMutex{}
 var StateHash string
-
-type Node struct {
-	Time   string `json:"time"`
-	Status string `json:"status"`
-}
-
-type Value struct {
-	Time  string `json:"time"`
-	Value string `json:"value"`
-}
 
 const (
 	ACTIVATED  = "activated"
@@ -72,7 +62,7 @@ func (state *State) DiscoveryNodes() {
 
 func UpdateNodeStatus(addr string, status string) {
 	mapMutex.Lock()
-	state.Ips[addr] = Node{
+	state.Ips[addr] = server.Node{
 		Status: status,
 		Time:   time.Now().Format(time_format),
 	}
@@ -80,7 +70,7 @@ func UpdateNodeStatus(addr string, status string) {
 }
 
 func (state *State) CheckIps() {
-	var ips []map[string]Node
+	var ips []map[string]server.Node
 	for addr, conn := range connections {
 		mapMutex.Lock()
 		status := state.Ips[addr].Status
@@ -107,7 +97,7 @@ func (state *State) CheckIps() {
 				}
 				response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
-				ip := new(map[string]Node)
+				ip := new(map[string]server.Node)
 				err = json.Unmarshal([]byte(response), &ip)
 				if err != nil {
 					log.Println(err)
@@ -119,7 +109,7 @@ func (state *State) CheckIps() {
 	UpdateIps(ips)
 }
 
-func UpdateIps(ips []map[string]Node) {
+func UpdateIps(ips []map[string]server.Node) {
 
 	for _, m := range ips {
 		for addr, node := range m {
@@ -142,7 +132,7 @@ func UpdateIps(ips []map[string]Node) {
 }
 
 func (state *State) CheckKV() {
-	var kvs []map[string]Value
+	var kvs []map[string]server.Value
 	for addr, conn := range connections {
 		mapMutex.Lock()
 		status := state.Ips[addr].Status
@@ -165,7 +155,7 @@ func (state *State) CheckKV() {
 				}
 				response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
-				kv := new(map[string]Value)
+				kv := new(map[string]server.Value)
 				err = json.Unmarshal([]byte(response), &kv)
 				if err != nil {
 					log.Println(err)
@@ -177,7 +167,7 @@ func (state *State) CheckKV() {
 	UpdateKV(kvs)
 }
 
-func UpdateKV(kvs []map[string]Value) {
+func UpdateKV(kvs []map[string]server.Value) {
 	mapMutex.Lock()
 	for _, kv := range kvs {
 		for k, v := range kv {

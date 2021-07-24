@@ -1,4 +1,4 @@
-package go_server
+package main
 
 import (
 	"encoding/base64"
@@ -20,7 +20,7 @@ func ReadFile(filename string) ([]byte, error) {
 			log.Println(err)
 		}
 	}
-	fmt.Println(home)
+	fmt.Println(home + "/" + filename)
 	return ioutil.ReadFile(home + "/" + filename)
 }
 

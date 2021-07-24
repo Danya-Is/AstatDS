@@ -1,4 +1,4 @@
-package go_server
+package main
 
 import (
 	"AstatDS/server"
@@ -50,12 +50,12 @@ func handle(conn net.Conn) {
 		if request.Type == server.GET_IPS {
 			mapMutex.Lock()
 			if _, ok := state.Ips[request.IP]; !ok {
-				state.Ips[request.IP] = Node{
+				state.Ips[request.IP] = server.Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,
 				}
 			} else if state.Ips[request.IP].Status == DEPRECATED {
-				state.Ips[request.IP] = Node{
+				state.Ips[request.IP] = server.Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,
 				}

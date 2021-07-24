@@ -1,4 +1,4 @@
-package go_server
+package main
 
 import (
 	"AstatDS/server"
@@ -46,7 +46,7 @@ func HomePostHandler(c *gin.Context) {
 	}
 	req := new(server.Request)
 	err = json.Unmarshal(value, &req)
-	state.KV[req.Key] = Value{
+	state.KV[req.Key] = server.Value{
 		Time:  time.Now().Format(time_format),
 		Value: req.Value,
 	}

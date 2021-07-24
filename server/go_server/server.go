@@ -1,6 +1,7 @@
-package go_server
+package main
 
 import (
+	"AstatDS/server"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -133,6 +134,7 @@ func ReadFlags() {
 
 func Init() {
 
+	flag.Parse()
 	file, err := ReadFile(*statePathFlag)
 	if err != nil {
 		log.Fatal(err)
@@ -141,8 +143,8 @@ func Init() {
 	if len(file) > 0 {
 		ReadState(file)
 	} else {
-		state.KV = make(map[string]Value)
-		state.Ips = make(map[string]Node)
+		state.KV = make(map[string]server.Value)
+		state.Ips = make(map[string]server.Node)
 	}
 
 	ReadFlags()

@@ -60,13 +60,11 @@ class ClientSock extends Thread {
         while (itr.hasNext()) {
             String ind = itr.next();
             if (copy.opt(ind) != null) {
-                JSONObject x = copy.getJSONObject(ind);
-                JSONObject y = data.getJSONObject(ind);
                 Date t1 = null;
                 Date t2 = null;
                 try {
-                    t1 = new SimpleDateFormat(Server.State.format).parse(x.getString("time"));
-                    t2 = new SimpleDateFormat(Server.State.format).parse(y.getString("time"));
+                    t1 = new SimpleDateFormat(Server.State.format).parse(copy.getJSONObject(ind).getString("time"));
+                    t2 = new SimpleDateFormat(Server.State.format).parse(data.getJSONObject(ind).getString("time"));
                 } catch (ParseException e) {
                     System.out.println(e.getMessage());
                 }
@@ -110,13 +108,11 @@ class ClientSock extends Thread {
         while (itr.hasNext()) {
             String ind = itr.next();
             if (copy.opt(ind) != null) {
-                JSONObject x = copy.getJSONObject(ind);
-                JSONObject y = data.getJSONObject(ind);
                 Date t1 = null;
                 Date t2 = null;
                 try {
-                    t1 = new SimpleDateFormat(Server.State.format).parse(x.getString("time"));
-                    t2 = new SimpleDateFormat(Server.State.format).parse(y.getString("time"));
+                    t1 = new SimpleDateFormat(Server.State.format).parse(copy.getJSONObject(ind).getString("time"));
+                    t2 = new SimpleDateFormat(Server.State.format).parse(data.getJSONObject(ind).getString("time"));
                 } catch (ParseException e) {
                     System.out.println(e.getMessage());
                 }

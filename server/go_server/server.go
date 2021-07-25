@@ -159,8 +159,8 @@ func Init() {
 
 func Loop() {
 	for {
-		UpdateConnections()
 		state.CheckIps()
+		UpdateConnections()
 		state.CheckKV()
 
 		mapMutex.Lock()

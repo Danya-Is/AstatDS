@@ -37,6 +37,7 @@ func sentHash(conn net.Conn, reqName string) error {
 func handle(conn net.Conn) {
 	for {
 		message, err := bufio.NewReader(conn).ReadBytes('\n')
+		log.Println(string(message))
 		if err != nil {
 			log.Println("server disconnected")
 			return

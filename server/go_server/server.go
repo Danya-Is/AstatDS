@@ -177,7 +177,7 @@ func Loop() {
 			WriteToDisk()
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 

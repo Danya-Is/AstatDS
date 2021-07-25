@@ -7,6 +7,7 @@ import (
 	"github.com/emirpasic/gods/maps/treemap"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -95,7 +96,7 @@ func (state *State) CheckIps() {
 				log.Println(err)
 				continue
 			}
-			if response != MD5(str) {
+			if strings.Compare(strings.Trim(response, "\n"), MD5(str)) != 0 {
 				err = conn.SentRequest(server.GET_IPS, addr)
 				if err != nil {
 					log.Println(err)
@@ -156,7 +157,7 @@ func (state *State) CheckKV() {
 			response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
 			str, _ := KV.ToJSON()
-			if response != MD5(str) {
+			if strings.Compare(strings.Trim(response, "\n"), MD5(str)) != 0 {
 				err := conn.SentRequest(server.GET_KV, addr)
 				if err != nil {
 					log.Println(err)

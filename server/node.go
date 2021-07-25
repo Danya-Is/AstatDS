@@ -3,8 +3,8 @@ package server
 import "github.com/mitchellh/mapstructure"
 
 type Node struct {
-	Time   string `json:"time"`
 	Status string `json:"status"`
+	Time   string `json:"time"`
 }
 
 func ConvertToNode(intr interface{}) Node {

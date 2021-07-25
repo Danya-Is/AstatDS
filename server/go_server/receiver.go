@@ -51,7 +51,8 @@ func handle(conn net.Conn) {
 		if request.Type == server.GET_IPS {
 			mapMutex.Lock()
 			i, ok := Ips.Get(request.IP)
-			if node := server.ConvertToNode(i); node.Status == DEPRECATED || !ok {
+			if node := server.ConvertToNode(i); !ok || node.Status == DEPRECATED {
+				log.Println("make activated")
 				Ips.Put(request.IP, server.Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,

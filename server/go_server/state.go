@@ -96,13 +96,16 @@ func (state *State) CheckIps() {
 				log.Println(err)
 				continue
 			}
+			log.Println("got " + response)
 			if strings.Compare(strings.Trim(response, "\n"), MD5(str)) != 0 {
+				log.Println("new ips hash")
 				err = conn.SentRequest(server.GET_IPS, addr)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
 				response, _ := bufio.NewReader(conn.c).ReadString('\n')
+				log.Println("got " + response)
 
 				ip := new(map[string]server.Node)
 				err = json.Unmarshal([]byte(response), &ip)
@@ -157,12 +160,15 @@ func (state *State) CheckKV() {
 			response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
 			str, _ := KV.ToJSON()
+			log.Println("got " + response)
 			if strings.Compare(strings.Trim(response, "\n"), MD5(str)) != 0 {
+				log.Println("new kv hash")
 				err := conn.SentRequest(server.GET_KV, addr)
 				if err != nil {
 					log.Println(err)
 					continue
 				}
+				log.Println("got " + response)
 				response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
 				kv := new(map[string]server.Value)

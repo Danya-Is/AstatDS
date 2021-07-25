@@ -172,6 +172,9 @@ func Loop() {
 		str := append(str1, str2...)
 		str = append(str, str3...)
 
+		s, _ := Ips.ToJSON()
+		log.Println(string(s))
+
 		if StateHash != MD5(str) {
 			StateHash = MD5(str)
 			WriteToDisk()

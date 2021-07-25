@@ -1,10 +1,10 @@
 package main
 
 import (
-	"AstatDS/server"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -140,11 +140,10 @@ func Init() {
 		log.Fatal(err)
 	}
 
+	KV = treemap.NewWithStringComparator()
+	Ips = treemap.NewWithStringComparator()
 	if len(file) > 0 {
 		ReadState(file)
-	} else {
-		state.KV = make(map[string]server.Value)
-		state.Ips = make(map[string]server.Node)
 	}
 
 	ReadFlags()
@@ -155,6 +154,8 @@ func Init() {
 	if len(state.DiscoveryIp) > 0 {
 		state.DiscoveryNodes()
 	}
+
+	UpdateConnections()
 }
 
 func Loop() {
@@ -163,16 +164,20 @@ func Loop() {
 		UpdateConnections()
 		state.CheckKV()
 
+		str1, _ := json.Marshal(state)
 		mapMutex.Lock()
-		str, _ := json.Marshal(state)
+		str2, _ := Ips.ToJSON()
 		mapMutex.Unlock()
+		str3, _ := KV.ToJSON()
+		str := append(str1, str2...)
+		str = append(str, str3...)
 
 		if StateHash != MD5(str) {
 			StateHash = MD5(str)
 			WriteToDisk()
 		}
 
-		time.Sleep(1000)
+		time.Sleep(time.Second)
 	}
 }
 

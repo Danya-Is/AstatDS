@@ -4,6 +4,8 @@ import (
 	"AstatDS/server"
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/emirpasic/gods/maps/treemap"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -100,14 +102,18 @@ func (c *Client) GetNodes() []byte {
 		return nil
 	}
 
-	ips := make(map[string]server.Node)
-	err = json.Unmarshal(respBody, &ips)
+	ips := treemap.NewWithStringComparator()
+	err = ips.FromJSON(respBody)
 	if err != nil {
 		return nil
 	}
 
 	resp := ""
-	for ip, node := range ips {
+	for i := 0; i < ips.Size(); i++ {
+		ipI := ips.Keys()[i]
+		nodeI := ips.Values()[i]
+		ip := fmt.Sprint(ipI)
+		node := server.ConvertToNode(nodeI)
 		resp += ip + " - " + node.Status + "\n"
 	}
 
@@ -129,15 +135,19 @@ func (c *Client) GetKVs() []byte {
 		return nil
 	}
 
-	kvs := make(map[string]server.Value)
-	err = json.Unmarshal(respBody, &kvs)
+	kvs := treemap.NewWithStringComparator()
+	err = kvs.FromJSON(respBody)
 	if err != nil {
 		return nil
 	}
 
 	resp := ""
-	for k, v := range kvs {
-		resp += k + " - " + v.Value + "\n"
+	for i := 0; i < kvs.Size(); i++ {
+		ipI := kvs.Keys()[i]
+		valueI := kvs.Values()[i]
+		ip := fmt.Sprint(ipI)
+		v := server.ConvertToValue(valueI)
+		resp += ip + " - " + v.Value + "\n"
 	}
 
 	return []byte(resp)

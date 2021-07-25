@@ -17,10 +17,10 @@ func sentHash(conn net.Conn, reqName string) error {
 	)
 	if reqName == server.GET_IPS_HASH {
 		mapMutex.Lock()
-		str, err = json.Marshal(state.Ips)
+		str, err = Ips.ToJSON()
 		mapMutex.Unlock()
 	} else {
-		str, err = json.Marshal(state.KV)
+		str, err = KV.ToJSON()
 	}
 
 	response := MD5(str)
@@ -49,18 +49,14 @@ func handle(conn net.Conn) {
 
 		if request.Type == server.GET_IPS {
 			mapMutex.Lock()
-			if _, ok := state.Ips[request.IP]; !ok {
-				state.Ips[request.IP] = server.Node{
+			i, ok := Ips.Get(request.IP)
+			if node := server.ConvertToNode(i); node.Status == DEPRECATED || !ok {
+				Ips.Put(request.IP, server.Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,
-				}
-			} else if state.Ips[request.IP].Status == DEPRECATED {
-				state.Ips[request.IP] = server.Node{
-					Time:   time.Now().Format(time_format),
-					Status: ACTIVATED,
-				}
+				})
 			}
-			response, err := json.Marshal(state.Ips)
+			response, err := Ips.ToJSON()
 			if err != nil {
 				log.Println(err)
 				return
@@ -71,7 +67,7 @@ func handle(conn net.Conn) {
 				log.Println(err)
 			}
 		} else if request.Type == server.GET_KV {
-			response, err := json.Marshal(state.KV)
+			response, err := KV.ToJSON()
 			if err != nil {
 				log.Println(err)
 				return

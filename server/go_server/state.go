@@ -4,6 +4,7 @@ import (
 	"AstatDS/server"
 	"bufio"
 	"encoding/json"
+	"github.com/emirpasic/gods/maps/treemap"
 	"log"
 	"net"
 	"sync"
@@ -11,16 +12,19 @@ import (
 )
 
 type State struct {
-	KV           map[string]server.Value `json:"kv"`
-	Ips          map[string]server.Node  `json:"ips"`
-	ClusterName  string                  `json:"clusterName"`
-	MyIP         string                  `json:"myIP"`
-	MyClientPort string                  `json:"myClientPort"`
-	MyPort       string                  `json:"myPort"`
-	DiscoveryIp  string                  `json:"discoveryIp"`
-	NodeName     string                  `json:"nodeName"`
-	StatePath    string                  `json:"statePath"`
+	ClusterName  string `json:"clusterName"`
+	MyIP         string `json:"myIP"`
+	MyClientPort string `json:"myClientPort"`
+	MyPort       string `json:"myPort"`
+	DiscoveryIp  string `json:"discoveryIp"`
+	NodeName     string `json:"nodeName"`
+	StatePath    string `json:"statePath"`
 }
+
+var (
+	KV  *treemap.Map
+	Ips *treemap.Map
+)
 
 var mapMutex = sync.RWMutex{}
 var StateHash string
@@ -49,7 +53,7 @@ func (state *State) DiscoveryNodes() {
 		log.Fatal(err)
 	}
 	response, _ := bufio.NewReader(conn).ReadString('\n')
-	err = json.Unmarshal([]byte(response), &state.Ips)
+	err = Ips.FromJSON([]byte(response))
 	if err != nil {
 		log.Println(err)
 	}
@@ -62,10 +66,10 @@ func (state *State) DiscoveryNodes() {
 
 func UpdateNodeStatus(addr string, status string) {
 	mapMutex.Lock()
-	state.Ips[addr] = server.Node{
+	Ips.Put(addr, server.Node{
 		Status: status,
 		Time:   time.Now().Format(time_format),
-	}
+	})
 	mapMutex.Unlock()
 }
 
@@ -73,24 +77,26 @@ func (state *State) CheckIps() {
 	var ips []map[string]server.Node
 	for addr, conn := range connections {
 		mapMutex.Lock()
-		status := state.Ips[addr].Status
+		intr, _ := Ips.Get(addr)
 		mapMutex.Unlock()
+		node := server.ConvertToNode(intr)
+		status := node.Status
 
 		if status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-			err := conn.SentRequest(server.GET_IPS_HASH)
+			err := conn.SentRequest(server.GET_IPS_HASH, addr)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 			response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
-			str, err := json.Marshal(state.Ips)
+			str, err := Ips.ToJSON()
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 			if response != MD5(str) {
-				err = conn.SentRequest(server.GET_IPS)
+				err = conn.SentRequest(server.GET_IPS, addr)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -114,16 +120,17 @@ func UpdateIps(ips []map[string]server.Node) {
 	for _, m := range ips {
 		for addr, node := range m {
 			mapMutex.Lock()
-			if _, ok := state.Ips[addr]; !ok {
-				state.Ips[addr] = node
-			} else if n, _ := state.Ips[addr]; n.Status != node.Status {
+			i, ok := Ips.Get(addr)
+			if !ok {
+				Ips.Put(addr, node)
+			} else if n := server.ConvertToNode(i); n.Status != node.Status {
 				t, err := time.Parse(time_format, node.Time)
 				curT, err := time.Parse(time_format, n.Time)
 				if err != nil {
 					panic(err)
 				}
 				if t.After(curT) {
-					state.Ips[addr] = node
+					Ips.Put(addr, node)
 				}
 			}
 			mapMutex.Unlock()
@@ -135,20 +142,22 @@ func (state *State) CheckKV() {
 	var kvs []map[string]server.Value
 	for addr, conn := range connections {
 		mapMutex.Lock()
-		status := state.Ips[addr].Status
+		intr, _ := Ips.Get(addr)
 		mapMutex.Unlock()
+		node := server.ConvertToNode(intr)
+		status := node.Status
 
 		if status == ACTIVATED && addr != state.MyIP+":"+state.MyPort {
-			err := conn.SentRequest(server.GET_KV_HASH)
+			err := conn.SentRequest(server.GET_KV_HASH, addr)
 			if err != nil {
-				log.Println(err)
+				log.Println("send req err")
 				continue
 			}
 			response, _ := bufio.NewReader(conn.c).ReadString('\n')
 
-			str, _ := json.Marshal(state.KV)
+			str, _ := KV.ToJSON()
 			if response != MD5(str) {
-				err := conn.SentRequest(server.GET_KV)
+				err := conn.SentRequest(server.GET_KV, addr)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -171,16 +180,17 @@ func UpdateKV(kvs []map[string]server.Value) {
 	mapMutex.Lock()
 	for _, kv := range kvs {
 		for k, v := range kv {
-			if _, ok := state.KV[k]; !ok {
-				state.KV[k] = v
-			} else if value, _ := state.KV[k]; value.Value != v.Value {
+			i, ok := KV.Get(k)
+			if !ok {
+				KV.Put(k, v)
+			} else if value := server.ConvertToValue(i); value.Value != v.Value {
 				t, err := time.Parse(time_format, v.Time)
 				curT, err := time.Parse(time_format, value.Time)
 				if err != nil {
 					log.Println(err)
 				}
 				if t.After(curT) {
-					state.KV[k] = v
+					KV.Put(k, v)
 				}
 			}
 		}

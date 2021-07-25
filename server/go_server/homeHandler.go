@@ -21,7 +21,8 @@ func HomeGetHandler(c *gin.Context) {
 	switch request.Type {
 	case server.GET_VALUE:
 		key := request.Key
-		value, ok := state.KV[key]
+		i, ok := KV.Get(key)
+		value := server.ConvertToValue(i)
 		fmt.Println(state)
 		if ok {
 			c.String(200, value.Value)
@@ -29,12 +30,11 @@ func HomeGetHandler(c *gin.Context) {
 			c.JSON(200, gin.H{"key": key, "value": "no value"})
 		}
 	case server.GET_NODES:
-		data, _ := json.Marshal(state.Ips)
+		data, _ := Ips.ToJSON()
 		c.String(200, string(data))
 	case server.GET_KV:
-		data, _ := json.Marshal(state.KV)
+		data, _ := KV.ToJSON()
 		c.String(200, string(data))
-
 	}
 }
 
@@ -46,10 +46,10 @@ func HomePostHandler(c *gin.Context) {
 	}
 	req := new(server.Request)
 	err = json.Unmarshal(value, &req)
-	state.KV[req.Key] = server.Value{
+	KV.Put(req.Key, server.Value{
 		Time:  time.Now().Format(time_format),
 		Value: req.Value,
-	}
+	})
 	fmt.Println(state)
 	c.String(200, "OK")
 }

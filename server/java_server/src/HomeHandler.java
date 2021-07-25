@@ -14,6 +14,7 @@ public class HomeHandler implements HttpHandler {
 
     private static final String getValue = "get value request";
     private static final String getNodes = "get nodes request";
+    private static final String getKV = "get kvs request";
     private static final String putValue = "put value request";
 
     @Override
@@ -21,34 +22,36 @@ public class HomeHandler implements HttpHandler {
         if ("GET".equals(httpExchange.getRequestMethod())) {
             handleGetRequest(httpExchange);
         } else if ("PUT".equals(httpExchange.getRequestMethod())) {
-            handlePostRequest(httpExchange);
+            handlePutRequest(httpExchange);
         }
     }
 
     public void handleGetRequest(HttpExchange httpExchange) throws IOException {
-        String request = "incorrect request\n";
+        StringBuilder request = new StringBuilder("incorrect request\n");
         BufferedReader isr = new BufferedReader(new InputStreamReader(httpExchange.getRequestBody()));
         String line = isr.readLine();
         JSONObject data = new JSONObject(line);
         if (getValue.equals(data.get("Type"))) {
-            request = Server.getValue(data.get("Key").toString()) + "\n";
+            request = new StringBuilder(Server.getValue(data.get("Key").toString()) + "\n");
         } else if (getNodes.equals(data.get("Type"))) {
-            request = "";
-            Iterator itr = Server.State.Ips.keys();
+            request = new StringBuilder();
+            Iterator<String> itr = Server.State.Ips.keys();
             while (itr.hasNext()) {
-                String elem = (String) itr.next();
-                request += elem + "\n";
+                String elem = itr.next();
+                request.append(elem).append("\n");
             }
+        } else if (getKV.equals(data.get("Type"))) {
+            request = new StringBuilder(Server.State.KV.toString() + "\n");
         }
 
-        httpExchange.sendResponseHeaders(200, request.getBytes().length);
+        httpExchange.sendResponseHeaders(200, request.toString().getBytes().length);
         OutputStream output = httpExchange.getResponseBody();
-        output.write(request.getBytes());
+        output.write(request.toString().getBytes());
         output.flush();
         httpExchange.close();
     }
 
-    public void handlePostRequest(HttpExchange httpExchange) throws IOException {
+    public void handlePutRequest(HttpExchange httpExchange) throws IOException {
         String request = "incorrect request";
         BufferedReader isr = new BufferedReader(new InputStreamReader(httpExchange.getRequestBody()));
         String line = isr.readLine();

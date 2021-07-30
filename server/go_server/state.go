@@ -60,6 +60,8 @@ func (state *State) DiscoveryNodes() {
 		log.Println(err)
 	}
 
+	UpdateNodeStatus(state.MyIP+":"+state.MyPort, ACTIVATED)
+
 	log.Println("discovered")
 	str, _ = Ips.ToJSON()
 	log.Println(string(str))

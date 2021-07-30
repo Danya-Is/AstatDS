@@ -148,8 +148,6 @@ func Init() {
 
 	ReadFlags()
 	checkFlags()
-
-	UpdateNodeStatus(state.MyIP+":"+state.MyPort, ACTIVATED)
 }
 
 func Loop() {

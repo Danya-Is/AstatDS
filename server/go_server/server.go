@@ -148,14 +148,6 @@ func Init() {
 
 	ReadFlags()
 	checkFlags()
-
-	UpdateNodeStatus(state.MyIP+":"+state.MyPort, ACTIVATED)
-
-	if len(state.DiscoveryIp) > 0 {
-		state.DiscoveryNodes()
-	}
-
-	UpdateConnections()
 }
 
 func Loop() {
@@ -172,6 +164,9 @@ func Loop() {
 		str := append(str1, str2...)
 		str = append(str, str3...)
 
+		s, _ := Ips.ToJSON()
+		log.Println(string(s))
+
 		if StateHash != MD5(str) {
 			StateHash = MD5(str)
 			WriteToDisk()
@@ -185,8 +180,13 @@ func main() {
 
 	c := make(chan int)
 	Init()
-	go Loop()
 	go listenNodes(c)
+	if len(state.DiscoveryIp) > 0 {
+		state.DiscoveryNodes()
+	}
+
+	UpdateConnections()
+	go Loop()
 
 	clientRouter := gin.Default()
 	clientRouter.GET("/", HomeGetHandler)

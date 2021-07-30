@@ -42,14 +42,18 @@ func UpdateConnections() {
 		ip := fmt.Sprint(Ips.Keys()[i])
 		if ip != state.MyIP+":"+state.MyPort {
 			mapMutex.Lock()
-			if connections[ip].c == nil {
+			str, _ := Ips.Get(ip)
+			mapMutex.Unlock()
+			con := server.ConvertToNode(str)
+			if connections[ip].c == nil || con.Status == DEPRECATED {
 				newConn, err := net.Dial("tcp", ip)
 				connections[ip] = Conn{c: newConn}
 				if err != nil {
 					log.Println(err)
+				} else {
+					UpdateNodeStatus(ip, ACTIVATED)
 				}
 			}
-			mapMutex.Unlock()
 		}
 	}
 }

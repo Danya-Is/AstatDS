@@ -37,6 +37,7 @@ func sentHash(conn net.Conn, reqName string) error {
 func handle(conn net.Conn) {
 	for {
 		message, err := bufio.NewReader(conn).ReadBytes('\n')
+		log.Println(string(message))
 		if err != nil {
 			log.Println("server disconnected")
 			return
@@ -50,7 +51,8 @@ func handle(conn net.Conn) {
 		if request.Type == server.GET_IPS {
 			mapMutex.Lock()
 			i, ok := Ips.Get(request.IP)
-			if node := server.ConvertToNode(i); node.Status == DEPRECATED || !ok {
+			if node := server.ConvertToNode(i); !ok || node.Status == DEPRECATED {
+				log.Println("make activated")
 				Ips.Put(request.IP, server.Node{
 					Time:   time.Now().Format(time_format),
 					Status: ACTIVATED,
@@ -93,6 +95,7 @@ func listenNodes(c chan int) {
 	}
 	defer func(ln net.Listener) {
 		err := ln.Close()
+		log.Println("close listening")
 		c <- 0
 		if err != nil {
 			log.Println(err)

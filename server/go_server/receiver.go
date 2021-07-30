@@ -95,6 +95,7 @@ func listenNodes(c chan int) {
 	}
 	defer func(ln net.Listener) {
 		err := ln.Close()
+		log.Println("close listening")
 		c <- 0
 		if err != nil {
 			log.Println(err)

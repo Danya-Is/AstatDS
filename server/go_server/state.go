@@ -54,10 +54,15 @@ func (state *State) DiscoveryNodes() {
 		log.Fatal(err)
 	}
 	response, _ := bufio.NewReader(conn).ReadString('\n')
+	log.Println("got" + response)
 	err = Ips.FromJSON([]byte(response))
 	if err != nil {
 		log.Println(err)
 	}
+
+	log.Println("discovered")
+	str, _ = Ips.ToJSON()
+	log.Println(string(str))
 
 	err = conn.Close()
 	if err != nil {

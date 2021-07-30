@@ -150,12 +150,6 @@ func Init() {
 	checkFlags()
 
 	UpdateNodeStatus(state.MyIP+":"+state.MyPort, ACTIVATED)
-
-	if len(state.DiscoveryIp) > 0 {
-		state.DiscoveryNodes()
-	}
-
-	UpdateConnections()
 }
 
 func Loop() {
@@ -188,8 +182,13 @@ func main() {
 
 	c := make(chan int)
 	Init()
-	go Loop()
 	go listenNodes(c)
+	if len(state.DiscoveryIp) > 0 {
+		state.DiscoveryNodes()
+	}
+
+	UpdateConnections()
+	go Loop()
 
 	clientRouter := gin.Default()
 	clientRouter.GET("/", HomeGetHandler)

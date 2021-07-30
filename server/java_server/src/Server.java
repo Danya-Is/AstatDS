@@ -101,6 +101,7 @@ public class Server {
                 System.out.println(e.getMessage());
             }
         } else {
+            State.Ips.put("127.0.0.1:" + State.techPort, new JSONObject().put("status", "activated").put("time", new SimpleDateFormat(Server.State.format).format(new Date())));
             if (args.length == 5) {State.Ips.put(State.discoveryIp, new JSONObject().put("status", "activated").put("time", new SimpleDateFormat(Server.State.format).format(new Date())));}
             update();
         }

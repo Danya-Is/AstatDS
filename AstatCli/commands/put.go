@@ -9,16 +9,19 @@ import (
 
 func NewPutCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "put",
-		Usage: "push kv to the store",
+		Name:      "put",
+		Usage:     "push kv to the store",
+		UsageText: "",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "key",
-				Value: "",
+				Name:     "key",
+				Value:    "",
+				Required: true,
 			},
 			&cli.StringFlag{
-				Name:  "value",
-				Value: "",
+				Name:     "value",
+				Value:    "",
+				Required: true,
 			},
 		},
 		Action: put,

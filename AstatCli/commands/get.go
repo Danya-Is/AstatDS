@@ -16,8 +16,9 @@ func NewGetCommand() *cli.Command {
 		Usage: "get value from the store",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "key",
-				Value: "",
+				Name:     "key",
+				Value:    "",
+				Required: true,
 			},
 		},
 		Action: get,

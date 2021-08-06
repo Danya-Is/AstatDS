@@ -11,18 +11,21 @@ import (
 
 func NewSetConfigCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "set-config",
-		Usage: "save cluster name and endpoints to file",
+		Name:      "set-config",
+		Usage:     "save cluster name and endpoints to file",
+		UsageText: "set-config -endpoints <endpoints> -name <cluster name>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "name",
-				Value: "NewCluster",
-				Usage: "name of the cluster",
+				Name:     "name",
+				Value:    "NewCluster",
+				Usage:    "name of the cluster",
+				Required: true,
 			},
 			&cli.StringFlag{
-				Name:  "endpoints",
-				Value: "",
-				Usage: "list of the endpoints\nExample: -endpoints 127.0.0.1:9080,127.0.0.1:9081",
+				Name:     "endpoints",
+				Value:    "",
+				Usage:    "list of the endpoints\nExample: -endpoints 127.0.0.1:9080,127.0.0.1:9081",
+				Required: true,
 			},
 		},
 		Action: setConfig,

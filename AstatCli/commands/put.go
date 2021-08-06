@@ -11,7 +11,7 @@ func NewPutCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "put",
 		Usage:     "push kv to the store",
-		UsageText: "",
+		UsageText: "put -key <key> -value <value>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "key",

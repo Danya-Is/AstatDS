@@ -12,8 +12,9 @@ type response struct {
 
 func NewGetCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "get",
-		Usage: "get value from the store",
+		Name:      "get",
+		Usage:     "get value from the store",
+		UsageText: "get -key <key>",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "key",
